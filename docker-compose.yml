@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: caselens-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: caselens
+      POSTGRES_PASSWORD: caselens_dev_password
+      POSTGRES_DB: caselens
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - caselens_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  caselens_postgres_data:
