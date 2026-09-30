@@ -3,3 +3,5 @@ venv/
 .env
 *.pyc
 pycache/
+storage/
+case_evidence.txt

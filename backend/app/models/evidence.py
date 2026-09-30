@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -51,9 +52,26 @@ class Evidence(Base):
         nullable=True,
         index=True,
     )
+    extracted_text: Mapped[str | None] = mapped_column(
+    Text,
+    nullable=True,
+    )
+
+    extraction_status: Mapped[str] = mapped_column(
+        String(50),
+        default="pending",
+        nullable=False,
+    )
+
+    extraction_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    
