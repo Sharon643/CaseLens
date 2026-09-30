@@ -4,6 +4,7 @@ from app.database import Base, engine
 from app.routes.cases import router as cases_router
 from app.routes.evidence import router as evidence_router
 from app.routes.ingestion import router as ingestion_router
+from app.routes.extraction import router as extraction_router
 
 from app.models.case import Case
 from app.models.evidence import Evidence
@@ -20,6 +21,7 @@ app = FastAPI(
 app.include_router(cases_router)
 app.include_router(evidence_router)
 app.include_router(ingestion_router)
+app.include_router(extraction_router)
 
 
 @app.get("/health")
