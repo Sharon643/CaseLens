@@ -6,10 +6,16 @@ from app.routes.evidence import router as evidence_router
 from app.routes.ingestion import router as ingestion_router
 from app.routes.extraction import router as extraction_router
 from app.routes.entities import router as entities_router
+from app.routes.events import router as events_router
+from app.routes.relationships import router as relationships_router
+from app.routes.graph import router as graph_router
+from app.routes.case_summary import router as case_summary_router
 
 from app.models.case import Case
 from app.models.evidence import Evidence
 from app.models.entity import Entity
+from app.models.event import Event
+from app.models.relationship import Relationship
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,6 +31,10 @@ app.include_router(evidence_router)
 app.include_router(ingestion_router)
 app.include_router(extraction_router)
 app.include_router(entities_router)
+app.include_router(events_router)
+app.include_router(relationships_router)
+app.include_router(graph_router)
+app.include_router(case_summary_router)
 
 
 @app.get("/health")
