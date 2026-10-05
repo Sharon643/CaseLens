@@ -11,6 +11,7 @@ from app.routes.events import router as events_router
 from app.routes.relationships import router as relationships_router
 from app.routes.graph import router as graph_router
 from app.routes.case_summary import router as case_summary_router
+from app.routes.entity_details import router as entity_details_router
 
 from app.models.case import Case
 from app.models.evidence import Evidence
@@ -47,6 +48,7 @@ app.include_router(events_router)
 app.include_router(relationships_router)
 app.include_router(graph_router)
 app.include_router(case_summary_router)
+app.include_router(entity_details_router)
 
 
 @app.get("/health")
