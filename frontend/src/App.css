@@ -801,3 +801,427 @@ select {
 
   flex-shrink: 0;
 }
+
+/* =========================================================
+   EVIDENCE ITEMS
+========================================================= */
+
+.evidence-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.evidence-item:hover {
+  border-color: rgba(120, 170, 255, 0.45);
+  background: rgba(120, 170, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.evidence-item-selected {
+  border-color: rgba(120, 170, 255, 0.65);
+  background: rgba(120, 170, 255, 0.09);
+}
+
+.evidence-item:active {
+  transform: translateY(0);
+}
+/* =========================================================
+   EVIDENCE VIEWER
+========================================================= */
+
+.evidence-viewer-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+
+  background: rgba(0, 0, 0, 0.72);
+
+  backdrop-filter: blur(5px);
+}
+
+.evidence-viewer {
+  width: min(1100px, 95vw);
+
+  max-height: 90vh;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  border-radius: 14px;
+
+  background: #111318;
+
+  box-shadow:
+    0 25px 80px rgba(0, 0, 0, 0.5);
+}
+
+
+/* Header */
+
+.evidence-viewer-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 20px 24px;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.08);
+}
+
+.evidence-viewer-label {
+  font-size: 10px;
+
+  letter-spacing: 1.5px;
+
+  opacity: 0.5;
+
+  margin-bottom: 5px;
+}
+
+.evidence-viewer-header h2 {
+  margin: 0;
+
+  font-size: 18px;
+
+  word-break: break-word;
+}
+
+.evidence-viewer-close {
+  width: 34px;
+
+  height: 34px;
+
+  border: none;
+
+  border-radius: 7px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  color: inherit;
+
+  font-size: 22px;
+
+  cursor: pointer;
+}
+
+.evidence-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+
+/* Loading */
+
+.evidence-viewer-loading {
+  padding: 40px;
+
+  text-align: center;
+
+  opacity: 0.6;
+}
+
+
+/* Metadata */
+
+.evidence-metadata {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 10px;
+
+  padding: 18px 24px;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.08);
+}
+
+.evidence-metadata > div {
+  min-width: 0;
+
+  padding: 12px;
+
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.evidence-metadata span {
+  display: block;
+
+  font-size: 9px;
+
+  letter-spacing: 1px;
+
+  opacity: 0.45;
+
+  margin-bottom: 5px;
+}
+
+.evidence-metadata strong {
+  display: block;
+
+  font-size: 12px;
+
+  overflow-wrap: anywhere;
+}
+
+.hash-value {
+  font-family: monospace;
+
+  font-size: 10px !important;
+}
+
+
+/* Content */
+
+/* =========================================================
+   EVIDENCE CONTENT VIEWER
+========================================================= */
+
+.evidence-content {
+  flex: 1;
+
+  min-height: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+}
+
+
+.evidence-content-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 12px 18px;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.07);
+
+  font-size: 10px;
+
+  letter-spacing: 1.2px;
+
+  font-weight: 600;
+
+  opacity: 0.6;
+}
+
+
+.evidence-line-count {
+  font-size: 10px;
+
+  letter-spacing: 0;
+
+  font-weight: 400;
+
+  opacity: 0.45;
+}
+
+
+/* =========================================================
+   TEXT VIEWER
+========================================================= */
+
+.evidence-text-viewer {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow: auto;
+
+  background: #0b0e12;
+
+  padding: 12px 0;
+}
+
+
+/* =========================================================
+   INDIVIDUAL LINE
+========================================================= */
+
+.evidence-text-line {
+  display: grid;
+
+  grid-template-columns: 54px minmax(0, 1fr);
+
+  min-height: 28px;
+
+  font-family:
+    "Cascadia Code",
+    "Consolas",
+    "Courier New",
+    monospace;
+
+  font-size: 12px;
+
+  line-height: 28px;
+
+  transition:
+    background 0.12s ease;
+}
+
+
+.evidence-text-line:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+
+/* =========================================================
+   LINE NUMBER
+========================================================= */
+
+.evidence-line-number {
+  padding-right: 14px;
+
+  text-align: right;
+
+  user-select: none;
+
+  color: rgba(255, 255, 255, 0.25);
+
+  border-right: 1px solid
+    rgba(255, 255, 255, 0.06);
+}
+
+
+/* =========================================================
+   LINE CONTENT
+========================================================= */
+
+.evidence-line-content {
+  padding-left: 18px;
+
+  padding-right: 24px;
+
+  color: rgba(255, 255, 255, 0.82);
+
+  white-space: pre;
+
+  overflow-x: auto;
+}
+
+
+.evidence-empty-content {
+  padding: 40px;
+
+  text-align: center;
+
+  opacity: 0.45;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.evidence-text-viewer::-webkit-scrollbar {
+  width: 7px;
+
+  height: 7px;
+}
+
+
+.evidence-text-viewer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+
+.evidence-text-viewer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+
+  border-radius: 10px;
+}
+
+
+.evidence-text-viewer::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Responsive */
+
+@media (max-width: 800px) {
+
+  .evidence-viewer-overlay {
+    padding: 10px;
+  }
+
+  .evidence-metadata {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
+/* =========================================================
+   EXTRACTION STATUS
+========================================================= */
+
+.evidence-status-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 12px 24px;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.07);
+}
+
+
+.evidence-status-row span {
+  font-size: 9px;
+
+  letter-spacing: 1.2px;
+
+  opacity: 0.45;
+}
+
+
+.evidence-status-row strong {
+  font-size: 11px;
+
+  font-weight: 600;
+
+  text-transform: uppercase;
+}
+
+
+.status-completed {
+  color: #7dd3a7;
+}

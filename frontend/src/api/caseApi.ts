@@ -193,6 +193,24 @@ export interface GraphNodeDetails {
   };
 }
 
+export interface EvidenceDetails {
+  id: number;
+  case_id: number;
+
+  original_filename: string;
+  stored_filename: string | null;
+
+  file_type: string | null;
+  file_size: number | null;
+
+  sha256_hash: string | null;
+
+  uploaded_at: string | null;
+  extraction_status: string | null;
+
+  extracted_text: string;
+}
+
 /* =========================================================
    GET CASE SUMMARY
 ========================================================= */
@@ -253,6 +271,17 @@ export async function getGraphNodeDetails(
         node_value: nodeValue,
       },
     }
+  );
+
+  return response.data;
+}
+
+export async function getEvidenceDetails(
+  caseId: number,
+  evidenceId: number
+): Promise<EvidenceDetails> {
+  const response = await api.get<EvidenceDetails>(
+    `/cases/${caseId}/evidence/${evidenceId}`
   );
 
   return response.data;

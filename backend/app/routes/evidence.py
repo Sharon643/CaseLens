@@ -89,3 +89,59 @@ def upload_evidence(
         "sha256_hash": evidence.sha256_hash,
         "uploaded_at": evidence.uploaded_at,
     }
+
+@router.get("/{evidence_id}")
+def get_evidence(
+    case_id: int,
+    evidence_id: int,
+    db: Session = Depends(get_db),
+):
+    evidence = (
+        db.query(Evidence)
+        .filter(
+            Evidence.id == evidence_id,
+            Evidence.case_id == case_id,
+        )
+        .first()
+    )
+
+    if not evidence:
+        raise HTTPException(
+            status_code=404,
+            detail="Evidence not found",
+        )
+
+    file_path = Path(evidence.file_path)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Evidence file not found on disk",
+        )
+
+    extracted_text = ""
+
+    try:
+        extracted_text = file_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+    except Exception:
+        extracted_text = ""
+
+    return {
+        "id": evidence.id,
+        "case_id": evidence.case_id,
+        "original_filename": evidence.original_filename,
+        "stored_filename": evidence.stored_filename,
+        "file_type": evidence.file_type,
+        "file_size": evidence.file_size,
+        "sha256_hash": evidence.sha256_hash,
+        "uploaded_at": evidence.uploaded_at,
+        "extraction_status": getattr(
+            evidence,
+            "extraction_status",
+            None,
+        ),
+        "extracted_text": extracted_text,
+    }
