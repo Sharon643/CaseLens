@@ -271,7 +271,121 @@ function App() {
       </div>
     );
   }
+  const highlightEvidenceLine = (line: string) => {
+  const parts = line.split(
+    /(\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\b|\b(?:process|action|file|user|device)=\S+)/g
+  );
 
+  return parts.map((part, index) => {
+    if (
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(part)
+    ) {
+      return (
+        <span
+          key={index}
+          className="evidence-token evidence-timestamp"
+        >
+          {part}
+        </span>
+      );
+    }
+
+    if (part.startsWith("process=")) {
+      return (
+        <span
+          key={index}
+          className="evidence-token evidence-process"
+        >
+          {part}
+        </span>
+      );
+    }
+
+    if (part.startsWith("action=")) {
+      return (
+        <span
+          key={index}
+          className="evidence-token evidence-action"
+        >
+          {part}
+        </span>
+      );
+    }
+
+    if (part.startsWith("file=")) {
+      return (
+          <button
+            key={index}
+            type="button"
+            className="evidence-token evidence-file evidence-token-button"
+            onClick={() => {
+              const fileValue = part.replace(
+                /^file=/,
+                ""
+              );
+
+              if (!graph) {
+                console.warn("Graph is not loaded.");
+                return;
+              }
+
+              const targetNode = graph.nodes.find(
+                (node) =>
+                  node.id === `file:${fileValue}`
+              );
+
+              if (!targetNode) {
+                console.warn(
+                  "Graph node not found:",
+                  `file:${fileValue}`
+                );
+
+                return;
+              }
+
+              setSelectedNode({
+                id: targetNode.id,
+                type: targetNode.type,
+                position: {
+                  x: 0,
+                  y: 0,
+                },
+                data: {
+                  label: targetNode.label,
+                },
+              });
+            }}
+          >
+            {part}
+          </button>
+      );
+    }
+
+    if (part.startsWith("user=")) {
+      return (
+        <span
+          key={index}
+          className="evidence-token evidence-user"
+        >
+          {part}
+        </span>
+      );
+    }
+
+    if (part.startsWith("device=")) {
+      return (
+        <span
+          key={index}
+          className="evidence-token evidence-device"
+        >
+          {part}
+        </span>
+      );
+    }
+
+    return part;
+  });
+};
 
   if (!summary || !graph) {
     return (
@@ -280,6 +394,8 @@ function App() {
       </div>
     );
   }
+
+  
 
 
   /* =========================================================
@@ -1329,6 +1445,44 @@ function App() {
                     <div className="evidence-content-header">
                       <span>EXTRACTED CONTENT</span>
 
+                      <div className="evidence-legend">
+
+                        <span className="evidence-legend-title">
+                          LEGEND
+                        </span>
+
+                        <span className="evidence-legend-item">
+                          <span className="legend-dot legend-timestamp" />
+                          Timestamp
+                        </span>
+
+                        <span className="evidence-legend-item">
+                          <span className="legend-dot legend-process" />
+                          Process
+                        </span>
+
+                        <span className="evidence-legend-item">
+                          <span className="legend-dot legend-action" />
+                          Action
+                        </span>
+
+                        <span className="evidence-legend-item">
+                          <span className="legend-dot legend-file" />
+                          File
+                        </span>
+
+                        <span className="evidence-legend-item">
+                          <span className="legend-dot legend-user" />
+                          User
+                        </span>
+
+                        <span className="evidence-legend-item">
+                          <span className="legend-dot legend-device" />
+                          Device
+                        </span>
+
+                      </div>
+
                       {evidenceDetails.extracted_text && (
                         <span className="evidence-line-count">
                           {
@@ -1362,7 +1516,9 @@ function App() {
                                 </span>
 
                                 <span className="evidence-line-content">
-                                  {trimmedLine || "\u00A0"}
+                                  {trimmedLine
+                                    ? highlightEvidenceLine(trimmedLine)
+                                    : "\u00A0"}
                                 </span>
 
                               </div>
