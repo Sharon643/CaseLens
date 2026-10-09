@@ -838,42 +838,37 @@ select {
 
 .evidence-viewer-overlay {
   position: fixed;
-
   inset: 0;
-
   z-index: 1000;
 
   display: flex;
-
   align-items: center;
   justify-content: center;
 
   padding: 30px;
+  overflow-y: auto;
 
   background: rgba(0, 0, 0, 0.72);
-
   backdrop-filter: blur(5px);
 }
 
 .evidence-viewer {
   width: min(1100px, 95vw);
-
   max-height: 90vh;
 
   display: flex;
-
   flex-direction: column;
 
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
 
   border: 1px solid rgba(255, 255, 255, 0.1);
-
   border-radius: 14px;
 
   background: #111318;
 
-  box-shadow:
-    0 25px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
 }
 
 
@@ -902,6 +897,18 @@ select {
   opacity: 0.5;
 
   margin-bottom: 5px;
+
+  width: 100%;
+
+  max-width: 1100px;
+
+  max-height: calc(100vh - 48px);
+
+  overflow-y: auto;
+
+  overscroll-behavior: contain;
+
+  box-sizing: border-box;
 }
 
 .evidence-viewer-header h2 {

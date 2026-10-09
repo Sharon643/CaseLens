@@ -5,6 +5,7 @@ import {
   getCaseGraph,
   getGraphNodeDetails,
   getEvidenceDetails,
+  api,
 } from "./api/caseApi";
 
 import type {
@@ -20,6 +21,20 @@ import "./App.css";
 
 import InvestigationGraph from "./components/InvestigationGraph";
 
+
+type EvidenceEvent = {
+  id: number;
+  evidence_id: number;
+  event_type: string;
+  timestamp: string | null;
+  description: string | null;
+  source_text: string | null;
+};
+
+type EvidenceEventsResponse = {
+  evidence_id: number;
+  events: EvidenceEvent[];
+};
 
 function App() {
   const CASE_ID = 1;
@@ -51,6 +66,11 @@ function App() {
   const [detailsError, setDetailsError] =
     useState<string | null>(null);
 
+  const [relatedEvents, setRelatedEvents] = 
+    useState<
+    GraphNodeDetails["events"]
+    >([]);
+
 
   /* =========================================================
      EVIDENCE VIEWER STATE
@@ -66,6 +86,15 @@ function App() {
     useState(false);
 
   const [evidenceError, setEvidenceError] =
+    useState<string | null>(null);
+
+  const [evidenceEvents, setEvidenceEvents] =
+    useState<EvidenceEvent[]>([]);
+
+  const [evidenceEventsLoading, setEvidenceEventsLoading] =
+    useState(false);
+
+  const [evidenceEventsError, setEvidenceEventsError] =
     useState<string | null>(null);
 
 
@@ -198,10 +227,13 @@ function App() {
     if (selectedEvidenceId === null) {
       setEvidenceDetails(null);
       setEvidenceError(null);
+      setEvidenceEvents([]);
+      setEvidenceEventsError(null);
       return;
     }
 
     const evidenceId = selectedEvidenceId;
+    let cancelled = false;
 
     async function loadEvidence() {
       setEvidenceLoading(true);
@@ -209,30 +241,44 @@ function App() {
       setEvidenceDetails(null);
 
       try {
-        const details = await getEvidenceDetails(
-          CASE_ID,
-          evidenceId
-        );
-
-        setEvidenceDetails(details);
-
+        const details = await getEvidenceDetails(CASE_ID, evidenceId);
+        if (!cancelled) setEvidenceDetails(details);
       } catch (err) {
-        console.error(
-          "Failed to load evidence:",
-          err
-        );
-
-        setEvidenceError(
-          "Unable to load evidence."
-        );
-
+        console.error("Failed to load evidence:", err);
+        if (!cancelled) setEvidenceError("Unable to load evidence.");
       } finally {
-        setEvidenceLoading(false);
+        if (!cancelled) setEvidenceLoading(false);
       }
     }
 
-    loadEvidence();
+    async function loadEvidenceEvents() {
+      setEvidenceEventsLoading(true);
+      setEvidenceEventsError(null);
+      setEvidenceEvents([]);
 
+      try {
+        const response = await api.get<EvidenceEventsResponse>(
+          `/evidence/${evidenceId}/events`
+        );
+        if (!cancelled) {
+          setEvidenceEvents(Array.isArray(response.data.events) ? response.data.events : []);
+        }
+      } catch (err) {
+        console.error("Failed to load evidence-related events:", err);
+        if (!cancelled) {
+          setEvidenceEventsError("Related events are not available yet.");
+        }
+      } finally {
+        if (!cancelled) setEvidenceEventsLoading(false);
+      }
+    }
+
+    void loadEvidence();
+    void loadEvidenceEvents();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedEvidenceId]);
 
 
@@ -244,6 +290,8 @@ function App() {
     setSelectedEvidenceId(null);
     setEvidenceDetails(null);
     setEvidenceError(null);
+    setEvidenceEvents([]);
+    setEvidenceEventsError(null);
   };
 
 
@@ -1435,6 +1483,96 @@ function App() {
 
                   </div>
 
+
+                  {/* =========================================
+                      CORRELATED EVENTS
+                  ========================================= */}
+
+                  <section className="detail-section evidence-correlated-events">
+                    <div className="panel-header">
+                      <div>
+                        <h3>Related Events</h3>
+                        <span>Events linked to this evidence file</span>
+                      </div>
+                      {!evidenceEventsLoading && (
+                        <span>{evidenceEvents.length} found</span>
+                      )}
+                    </div>
+
+                    {evidenceEventsLoading && (
+                      <p className="empty-detail">Loading related events...</p>
+                    )}
+
+                    {evidenceEventsError && !evidenceEventsLoading && (
+                      <p className="empty-detail">{evidenceEventsError}</p>
+                    )}
+
+                    {!evidenceEventsLoading && !evidenceEventsError && evidenceEvents.length === 0 && (
+                      <p className="empty-detail">No events are linked to this evidence.</p>
+                    )}
+
+                    {!evidenceEventsLoading && evidenceEvents.map((event) => (
+                      <article className="detail-item event-item" key={event.id}>
+                        <div className="event-type">
+                          {event.event_type.replaceAll("_", " ")}
+                        </div>
+                        {event.timestamp && (
+                          <div className="event-timestamp">
+                            {new Date(event.timestamp).toLocaleString("en-IN", {
+                              dateStyle: "medium",
+                              timeStyle: "medium",
+                              timeZone: "UTC",
+                            })} UTC
+                          </div>
+                        )}
+                        {event.description && (
+                          <div className="event-description">   
+                            {event.description.split(/(file=\S+)/g).map((part, index) => {
+                              if (!part.startsWith("file=")) {
+                                return <span key={index}>{part}</span>;
+                              }
+
+                              const fileValue = part.replace(/^file=/, "");
+                              const targetNode = graph.nodes.find(
+                                (node) => node.id === `file:${fileValue}`
+                              );
+
+                              if (!targetNode) {
+                                return <span key={index}>{part}</span>;
+                              }
+
+                              return (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  className="evidence-event-file-link"
+                                  onClick={() => {
+                                    setSelectedNode({
+                                      id: targetNode.id,
+                                      type: targetNode.type,
+                                      position: { x: 0, y: 0 },
+                                      data: { label: targetNode.label },
+                                    });
+                                    closeEvidenceViewer();
+                                  }}
+                                  title={`Open ${fileValue} in the investigation graph`}
+                                >
+                                  {part}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {event.source_text && event.source_text !== event.description && (
+                          <details>
+                            <summary>View source text</summary>
+                            <p className="event-description">{event.source_text}</p>
+                          </details>
+                        )}
+                        <span>Event #{event.id} · Evidence #{event.evidence_id}</span>
+                      </article>
+                    ))}
+                  </section>
 
                   {/* =========================================
                       EXTRACTED CONTENT

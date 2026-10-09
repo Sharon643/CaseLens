@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.services.event_extraction import (
-    EventExtractionService,
-)
+from app.models.evidence import Evidence
+from app.models.event import Event
+from app.services.event_extraction import EventExtractionService
 
 
 router = APIRouter(
@@ -18,24 +18,61 @@ def extract_evidence_events(
     evidence_id: int,
     db: Session = Depends(get_db),
 ):
+    """Extract events from one evidence record."""
     try:
         service = EventExtractionService(db)
-
-        return service.extract_from_evidence(
-            evidence_id
-        )
+        return service.extract_from_evidence(evidence_id)
 
     except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=str(exc),
+            detail="Failed to extract events from evidence.",
+        ) from exc
+
+
+@router.get("/{evidence_id}/events")
+def get_evidence_events(
+    evidence_id: int,
+    db: Session = Depends(get_db),
+):
+    """Return events associated with one evidence record."""
+    evidence = (
+        db.query(Evidence)
+        .filter(Evidence.id == evidence_id)
+        .first()
+    )
+
+    if evidence is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Evidence {evidence_id} was not found.",
         )
+
+    events = (
+        db.query(Event)
+        .filter(Event.evidence_id == evidence_id)
+        .order_by(Event.timestamp.asc().nullslast(), Event.id.asc())
+        .all()
+    )
+
+    return {
+        "case_id": evidence.case_id,
+        "evidence_id": evidence.id,
+        "events": [
+            {
+                "id": event.id,
+                "evidence_id": event.evidence_id,
+                "event_type": event.event_type,
+                "timestamp": event.timestamp,
+                "description": event.description,
+                "source_text": event.source_text,
+            }
+            for event in events
+        ],
+    }
 
 
 @router.post("/cases/{case_id}/events")
@@ -43,15 +80,16 @@ def extract_case_events(
     case_id: int,
     db: Session = Depends(get_db),
 ):
+    """Extract events from all evidence belonging to a case."""
     try:
         service = EventExtractionService(db)
+        return service.extract_from_case(case_id)
 
-        return service.extract_from_case(
-            case_id
-        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=str(exc),
-        )
+            detail="Failed to extract case events.",
+        ) from exc
