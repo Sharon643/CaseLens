@@ -25,6 +25,7 @@ select {
 
 .app {
   min-height: 100vh;
+  width: 100%;
   background: #0b0f14;
 }
 
@@ -32,18 +33,20 @@ select {
 /* Header */
 
 .header {
-  height: 76px;
+  width: 100%;
+  min-height: 72px;
+  height: auto;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 20px;
 
-  padding: 0 32px;
-
+  padding: 12px 32px;
   border-bottom: 1px solid #202731;
-
   background: #0f141b;
 }
+
 
 .header h1 {
   margin: 0;
@@ -81,11 +84,10 @@ select {
 /* Dashboard */
 
 .dashboard {
-  padding: 28px 32px;
-
-  max-width: 1600px;
-
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 18px 28px 24px;
 }
 
 
@@ -1529,4 +1531,263 @@ select {
 .timeline-list::-webkit-scrollbar-thumb {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.16);
+}
+
+
+/* =========================================================
+   CASELENS — CONSOLIDATED RESPONSIVE LAYOUT
+   Full-width app shell and compact investigation workspace
+========================================================= */
+
+/* Remove the default Vite root width/padding constraint if present. */
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+}
+
+#root {
+  max-width: none;
+  padding: 0;
+}
+
+/* App shell and full-width header */
+.app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.header {
+  width: 100%;
+  min-height: 72px;
+  height: auto;
+  padding: 12px 28px;
+}
+
+/* Use the full viewport instead of a centered max-width container. */
+.dashboard {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 16px 24px 24px;
+}
+
+/* Compact summary cards to make room for the investigation workspace. */
+.summary-grid {
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.summary-card {
+  min-width: 0;
+  padding: 12px 18px;
+}
+
+.summary-card span {
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.summary-card strong {
+  font-size: 24px;
+}
+
+/* Give the graph the majority of the horizontal space. */
+.investigation-grid {
+  grid-template-columns: minmax(0, 1.9fr) minmax(320px, 0.85fr);
+  gap: 16px;
+  margin-bottom: 14px;
+  align-items: stretch;
+}
+
+.investigation-grid > .panel {
+  min-width: 0;
+}
+
+.graph-panel {
+  min-height: 0;
+}
+
+.graph-container {
+  width: 100%;
+  height: clamp(380px, 48vh, 520px);
+}
+
+/* Compact panel headers consistently. */
+.panel-header {
+  min-height: 56px;
+  padding: 12px 16px;
+}
+
+/* Keep long node details scrollable inside their own panel. */
+.investigation-grid > .panel:last-child {
+  min-height: 0;
+  min-width: 0;
+}
+
+.investigation-grid > .panel:last-child .selected-entity {
+  max-height: clamp(380px, 48vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Timeline remains independently scrollable. */
+.timeline-list {
+  max-height: 440px;
+  overflow-y: auto;
+}
+
+/* Keep long names and values from forcing horizontal overflow. */
+.summary-card,
+.panel,
+.selected-entity,
+.node-details {
+  min-width: 0;
+}
+
+/* Tablet layout */
+@media (max-width: 900px) {
+  .header {
+    padding: 12px 18px;
+  }
+
+  .dashboard {
+    padding: 16px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .investigation-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .graph-container {
+    height: 380px;
+  }
+
+  .investigation-grid > .panel:last-child .selected-entity {
+    max-height: 480px;
+  }
+
+  .detail-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Mobile layout */
+@media (max-width: 600px) {
+  .header {
+    padding: 12px;
+  }
+
+  .dashboard {
+    padding: 12px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .summary-card {
+    padding: 12px;
+  }
+
+  .summary-card strong {
+    font-size: 22px;
+  }
+
+  .graph-container {
+    height: 340px;
+  }
+
+  .detail-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .evidence-viewer-overlay {
+    padding: 10px;
+  }
+
+  .evidence-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Timeline filtering controls */
+
+.timeline-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #202731;
+}
+
+.timeline-search,
+.timeline-type-filter {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #344255;
+  border-radius: 7px;
+  background: #0f141b;
+  color: #e8edf3;
+  font-size: 12px;
+}
+
+.timeline-search {
+  flex: 1 1 180px;
+}
+
+.timeline-type-filter {
+  flex: 0 1 180px;
+}
+
+.timeline-search:focus,
+.timeline-type-filter:focus {
+  outline: 1px solid #6d98d5;
+  border-color: #6d98d5;
+}
+
+.timeline-usb-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #c5ced8;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.timeline-usb-filter input {
+  accent-color: #f5c26b;
+}
+
+.timeline-clear-button {
+  padding: 8px 11px;
+  border: 1px solid #344255;
+  border-radius: 7px;
+  background: #18212c;
+  color: #c5ced8;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.timeline-clear-button:hover {
+  background: #202e40;
+  border-color: #6d98d5;
+}
+
+@media (max-width: 600px) {
+  .timeline-search,
+  .timeline-type-filter {
+    flex-basis: 100%;
+    width: 100%;
+  }
 }

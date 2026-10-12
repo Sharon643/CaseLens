@@ -76,7 +76,9 @@ function App() {
   const [timelineError, setTimelineError] =
     useState<string | null>(null);
 
-
+  const [timelineSearch, setTimelineSearch] = useState("");
+  const [timelineTypeFilter, setTimelineTypeFilter] = useState("all");
+  const [usbOnly, setUsbOnly] = useState(false);
 
   /* =========================================================
      GRAPH NODE STATE
@@ -375,6 +377,37 @@ function App() {
     setEvidenceEvents([]);
     setEvidenceEventsError(null);
   };
+
+  
+  const filteredTimelineEvents = timelineEvents.filter((event) => {
+    const searchableText = [
+      event.event_type,
+      event.description ?? "",
+      event.source_text ?? "",
+      event.evidence_filename,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch = searchableText.includes(
+      timelineSearch.trim().toLowerCase()
+    );
+
+    const matchesType =
+      timelineTypeFilter === "all" ||
+      event.event_type === timelineTypeFilter;
+
+    const matchesUsb =
+      !usbOnly ||
+      /usb|removable|flash drive/i.test(searchableText);
+
+    return matchesSearch && matchesType && matchesUsb;
+  });
+
+  const timelineEventTypes = [
+    ...new Set(timelineEvents.map((event) => event.event_type)),
+  ].sort();
+
 
 
   /* =========================================================
@@ -1357,9 +1390,63 @@ function App() {
 
             <div>
 
-              <h2>
-                Event Timeline
-              </h2>
+             
+            <div className="panel-header timeline-header">
+              <div>
+                <h2>Event Timeline</h2>
+                <span>
+                  Showing {filteredTimelineEvents.length} of{" "}
+                  {timelineEvents.length} events
+                </span>
+              </div>
+            </div>
+
+            <div className="timeline-filters">
+              <input
+                type="search"
+                className="timeline-search"
+                placeholder="Search events, files..."
+                value={timelineSearch}
+                onChange={(event) => setTimelineSearch(event.target.value)}
+                aria-label="Search timeline events"
+              />
+
+              <select
+                className="timeline-type-filter"
+                value={timelineTypeFilter}
+                onChange={(event) => setTimelineTypeFilter(event.target.value)}
+                aria-label="Filter by event type"
+              >
+                <option value="all">All event types</option>
+                {timelineEventTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </select>
+
+              <label className="timeline-usb-filter">
+                <input
+                  type="checkbox"
+                  checked={usbOnly}
+                  onChange={(event) => setUsbOnly(event.target.checked)}
+                />
+                USB activity
+              </label>
+
+              <button
+                type="button"
+                className="timeline-clear-button"
+                onClick={() => {
+                  setTimelineSearch("");
+                  setTimelineTypeFilter("all");
+                  setUsbOnly(false);
+                }}
+              >
+                Clear
+              </button>
+            </div>
+
 
               <span>
                 {summary.event_count} events
@@ -1386,15 +1473,15 @@ function App() {
 
             {!timelineLoading &&
               !timelineError &&
-              timelineEvents.length === 0 && (
+              filteredTimelineEvents.length === 0 && (
                 <p className="timeline-message">
-                  No events found for this case.
+                  No matching events. Try changing or clearing your filters.
                 </p>
               )}
 
             {!timelineLoading &&
               !timelineError &&
-              timelineEvents.map((event) => {
+              filteredTimelineEvents.map((event) => {
                 const isUsbActivity =
                   event.description?.includes("USB-4471") ?? false;
 
