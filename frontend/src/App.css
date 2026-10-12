@@ -1388,3 +1388,145 @@ select {
 
   text-decoration: underline;
 }
+
+
+/* =========================================================
+   CASE INVESTIGATION TIMELINE
+========================================================= */
+
+.timeline-list {
+  padding: 20px 24px 24px;
+  max-height: 650px;
+  overflow-y: auto;
+}
+
+.timeline-message {
+  margin: 12px 0;
+  color: #8995a3;
+  font-size: 13px;
+}
+
+.timeline-error {
+  color: #f29b9b;
+}
+
+.timeline-event {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 14px;
+  padding-bottom: 24px;
+}
+
+.timeline-event:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 13px;
+  bottom: 0;
+  width: 2px;
+  background: #293442;
+}
+
+.timeline-event-marker {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border: 2px solid #8295aa;
+  border-radius: 50%;
+  background: #11171f;
+}
+
+.timeline-event-content {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #26313e;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.timeline-event-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-event-type {
+  color: #dce5ef;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.timeline-event-time {
+  margin-top: 7px;
+  color: #7f8b99;
+  font-size: 11px;
+}
+
+.timeline-event-description {
+  margin: 10px 0;
+  color: #c5ced8;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.timeline-source-button {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid #344255;
+  border-radius: 6px;
+  background: #18212c;
+  color: #9fc4ff;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.timeline-source-button:hover {
+  border-color: #6d98d5;
+  background: #202e40;
+}
+
+.timeline-source-id {
+  color: #8290a0;
+  font-size: 10px;
+}
+
+.timeline-event-usb .timeline-event-content {
+  border-color: rgba(245, 194, 107, 0.4);
+  background: rgba(245, 194, 107, 0.045);
+}
+
+.timeline-event-usb .timeline-event-marker {
+  border-color: #f5c26b;
+  background: #f5c26b;
+}
+
+.timeline-usb-badge {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(245, 194, 107, 0.12);
+  color: #f5c26b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.timeline-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timeline-list::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+}

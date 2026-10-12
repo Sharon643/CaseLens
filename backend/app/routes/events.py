@@ -93,3 +93,39 @@ def extract_case_events(
             status_code=500,
             detail="Failed to extract case events.",
         ) from exc
+
+
+@router.get("/cases/{case_id}/events")
+def get_case_events(
+    case_id: int,
+    db: Session = Depends(get_db),
+):
+    """Return all events for a case in chronological order."""
+
+    rows = (
+        db.query(Event, Evidence.original_filename)
+        .join(Evidence, Event.evidence_id == Evidence.id)
+        .filter(Evidence.case_id == case_id)
+        .order_by(
+            Event.timestamp.asc().nullslast(),
+            Event.id.asc(),
+        )
+        .all()
+    )
+
+    return {
+        "case_id": case_id,
+        "event_count": len(rows),
+        "events": [
+            {
+                "id": event.id,
+                "evidence_id": event.evidence_id,
+                "evidence_filename": filename,
+                "event_type": event.event_type,
+                "timestamp": event.timestamp,
+                "description": event.description,
+                "source_text": event.source_text,
+            }
+            for event, filename in rows
+        ],
+    }

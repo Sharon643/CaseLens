@@ -36,6 +36,24 @@ type EvidenceEventsResponse = {
   events: EvidenceEvent[];
 };
 
+
+type CaseTimelineEvent = {
+  id: number;
+  evidence_id: number;
+  evidence_filename: string;
+  event_type: string;
+  timestamp: string | null;
+  description: string | null;
+  source_text: string | null;
+};
+
+type CaseTimelineResponse = {
+  case_id: number;
+  event_count: number;
+  events: CaseTimelineEvent[];
+};
+
+
 function App() {
   const CASE_ID = 1;
 
@@ -48,6 +66,16 @@ function App() {
 
   const [graph, setGraph] =
     useState<CaseGraph | null>(null);
+
+  const [timelineEvents, setTimelineEvents] =
+    useState<CaseTimelineEvent[]>([]);
+
+  const [timelineLoading, setTimelineLoading] =
+    useState(true);
+
+  const [timelineError, setTimelineError] =
+    useState<string | null>(null);
+
 
 
   /* =========================================================
@@ -144,6 +172,60 @@ function App() {
 
     loadCase();
   }, []);
+/*LOAD TIMELINE*/
+
+  
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTimeline() {
+      setTimelineLoading(true);
+      setTimelineError(null);
+
+      try {
+        const response = await api.get<CaseTimelineResponse>(
+          `/evidence/cases/${CASE_ID}/events`
+        );
+
+        if (!cancelled) {
+          const events = Array.isArray(response.data.events)
+            ? response.data.events
+            : [];
+
+          setTimelineEvents(
+            [...events].sort((a, b) => {
+              if (!a.timestamp) return 1;
+              if (!b.timestamp) return -1;
+
+              return (
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime()
+              );
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load case timeline:", err);
+
+        if (!cancelled) {
+          setTimelineError(
+            "Unable to load the investigation timeline."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setTimelineLoading(false);
+        }
+      }
+    }
+
+    void loadTimeline();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
 
   /* =========================================================
@@ -1288,10 +1370,92 @@ function App() {
           </div>
 
 
-          <div className="timeline-placeholder">
-            Timeline visualization will be
-            implemented next.
+
+          <div className="timeline-list">
+            {timelineLoading && (
+              <p className="timeline-message">
+                Loading investigation events...
+              </p>
+            )}
+
+            {timelineError && !timelineLoading && (
+              <p className="timeline-message timeline-error">
+                {timelineError}
+              </p>
+            )}
+
+            {!timelineLoading &&
+              !timelineError &&
+              timelineEvents.length === 0 && (
+                <p className="timeline-message">
+                  No events found for this case.
+                </p>
+              )}
+
+            {!timelineLoading &&
+              !timelineError &&
+              timelineEvents.map((event) => {
+                const isUsbActivity =
+                  event.description?.includes("USB-4471") ?? false;
+
+                return (
+                  <article
+                    key={event.id}
+                    className={`timeline-event ${
+                      isUsbActivity ? "timeline-event-usb" : ""
+                    }`}
+                  >
+                    <div className="timeline-event-marker" />
+
+                    <div className="timeline-event-content">
+                      <div className="timeline-event-top">
+                        <span className="timeline-event-type">
+                          {event.event_type.replaceAll("_", " ")}
+                        </span>
+
+                        {isUsbActivity && (
+                          <span className="timeline-usb-badge">
+                            USB ACTIVITY
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="timeline-event-time">
+                        {event.timestamp
+                          ? `${new Date(event.timestamp).toLocaleString(
+                              "en-IN",
+                              {
+                                dateStyle: "medium",
+                                timeStyle: "medium",
+                                timeZone: "UTC",
+                              }
+                            )} UTC`
+                          : "Timestamp unavailable"}
+                      </div>
+
+                      <p className="timeline-event-description">
+                        {event.description || "No description available."}
+                      </p>
+
+                      <button
+                        type="button"
+                        className="timeline-source-button"
+                        onClick={() => {
+                          setSelectedEvidenceId(event.evidence_id);
+                        }}
+                      >
+                        <span aria-hidden="true">↗</span>
+                        {event.evidence_filename}
+                        <span className="timeline-source-id">
+                          Evidence #{event.evidence_id}
+                        </span>
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
           </div>
+
 
         </section>
 
