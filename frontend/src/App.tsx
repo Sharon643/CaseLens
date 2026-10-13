@@ -122,6 +122,8 @@ function App() {
   const [timelineSearch, setTimelineSearch] = useState("");
   const [timelineTypeFilter, setTimelineTypeFilter] = useState("all");
   const [usbOnly, setUsbOnly] = useState(false);
+  const [activeFinding, setActiveFinding] =
+    useState<PossibleTransfer | null>(null);
 
   /* =========================================================
      GRAPH NODE STATE
@@ -1544,6 +1546,22 @@ function App() {
                     <h3 className="finding-file-name">
                       {transfer.filename}
                     </h3>
+                    <button
+                      type="button"
+                      className="finding-timeline-button"
+                      onClick={() => {
+                        setActiveFinding(transfer);
+                        setTimelineSearch(transfer.filename);
+                        setTimelineTypeFilter("all");
+                        setUsbOnly(false);
+
+                        document
+                          .getElementById("case-event-timeline")
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                    >
+                      View matching timeline events →
+                    </button>
 
                     <div className="finding-facts">
                       <div>
@@ -1645,12 +1663,120 @@ function App() {
           </div>
         </section>
 
+        {/* EVIDENCE CORRELATION */}
+        <section className="panel correlation-panel">
+          <div className="panel-header">
+            <div>
+              <h2>Evidence Correlation</h2>
+              <p>Compare records associated with each suspected transfer.</p>
+            </div>
+          </div>
+
+          <div className="correlation-note">
+            Matching filenames and timestamps can connect records, but do not
+            independently establish that a transfer was unauthorized.
+          </div>
+
+          {!analysisLoading &&
+            !analysisError &&
+            possibleTransfers.length === 0 && (
+              <p className="findings-message">
+                No transfers are available to compare.
+              </p>
+            )}
+
+          {possibleTransfers.map((transfer, index) => (
+            <article
+              className="correlation-transfer"
+              key={`${transfer.timestamp}-${transfer.filename}`}
+            >
+              <div className="correlation-transfer-header">
+                <div>
+                  <span className="finding-number">
+                    TRANSFER {index + 1}
+                  </span>
+                  <h3>{transfer.filename}</h3>
+                </div>
+
+                <span className="correlation-count">
+                  {transfer.supporting_evidence.length} source records
+                </span>
+              </div>
+
+              <div className="correlation-meta">
+                <span>Recorded time</span>
+                <strong>
+                  {transfer.timestamp
+                    ? `${new Date(transfer.timestamp).toLocaleString(
+                        "en-IN",
+                        {
+                          dateStyle: "medium",
+                          timeStyle: "medium",
+                          timeZone: "UTC",
+                        }
+                      )} UTC`
+                    : "Timestamp unavailable"}
+                </strong>
+              </div>
+
+              <div className="correlation-table-wrapper">
+                <table className="correlation-table">
+                  <thead>
+                    <tr>
+                      <th>Source file</th>
+                      <th>Evidence ID</th>
+                      <th>Event ID</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {transfer.supporting_evidence.map((source) => (
+                      <tr key={source.event_id}>
+                        <td>{source.evidence_filename}</td>
+                        <td>#{source.evidence_id}</td>
+                        <td>#{source.event_id}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="finding-timeline-button"
+                            onClick={() =>
+                              setSelectedEvidenceId(source.evidence_id)
+                            }
+                          >
+                            Inspect evidence →
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="correlation-footnote">
+                These records are associated with the same suspected transfer.
+                Inspect their contents to determine whether they independently
+                support the activity or repeat information from another source.
+              </p>
+            </article>
+          ))}
+
+          <div className="findings-disclaimer">
+            <strong>Interpretation</strong>
+            <p>
+              Three records do not necessarily mean three independent
+              confirmations. Verify the original contents, timestamps, device
+              identifiers, and provenance before drawing conclusions.
+            </p>
+          </div>
+        </section>
+
 
         {/* ===================================================
             TIMELINE
         =================================================== */}
 
-        <section className="panel timeline-panel">
+        <section id="case-event-timeline" className="panel timeline-panel" >
           <div className="panel-header timeline-header">
             <div className="timeline-heading">
               <h2>Event Timeline</h2>
@@ -1735,12 +1861,28 @@ function App() {
                 const isUsbActivity =
                   event.description?.includes("USB-4471") ?? false;
 
+                const matchesActiveFinding =
+                activeFinding !== null &&
+                activeFinding.timestamp !== null &&
+                event.timestamp !== null &&
+                Math.abs(
+                  new Date(event.timestamp).getTime() -
+                    new Date(activeFinding.timestamp).getTime()
+                ) < 1000 &&
+                activeFinding.supporting_evidence.some(
+                  (source) => source.evidence_id === event.evidence_id
+                );
+
                 return (
                   <article
                     key={event.id}
-                    className={`timeline-event ${
-                      isUsbActivity ? "timeline-event-usb" : ""
-                    }`}
+                    className={[
+                      "timeline-event",
+                      isUsbActivity ? "timeline-event-usb" : "",
+                      matchesActiveFinding ? "timeline-event-finding-match" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
                     <div className="timeline-event-marker" />
 
@@ -1753,6 +1895,11 @@ function App() {
                         {isUsbActivity && (
                           <span className="timeline-usb-badge">
                             USB ACTIVITY
+                          </span>
+                        )}
+                        {matchesActiveFinding && (
+                          <span className="timeline-finding-match-badge">
+                            MATCHED TO FINDING
                           </span>
                         )}
                       </div>
