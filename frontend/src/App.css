@@ -1791,3 +1791,535 @@ body,
     width: 100%;
   }
 }
+/* Investigation Findings */
+.findings-panel {
+  margin-bottom: 24px;
+}
+
+.finding-transfer-list {
+  display: grid;
+  gap: 14px;
+}
+
+.finding-transfer {
+  padding: 16px;
+  border: 1px solid var(--border-color, #303746);
+  border-radius: 10px;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+}
+
+.finding-transfer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.finding-number {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.finding-severity {
+  padding: 4px 8px;
+  border: 1px solid #b7791f;
+  border-radius: 6px;
+  color: #f6c66a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.finding-transfer h3 {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.finding-timestamp {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.finding-evidence-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.finding-evidence-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #303746);
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.finding-evidence-button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.finding-evidence-button span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.finding-evidence-button span:last-child {
+  flex-shrink: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.finding-review-note {
+  margin-top: 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.7;
+}
+/* =========================================================
+   LAYOUT POLISH
+========================================================= */
+
+.dashboard {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 32px 40px;
+}
+
+.summary-grid {
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  min-width: 0;
+}
+
+.investigation-grid {
+  align-items: start;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.panel {
+  min-width: 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-header > div {
+  min-width: 0;
+}
+
+.panel-header h2 {
+  line-height: 1.4;
+}
+
+.panel-header p {
+  margin: 4px 0 0;
+  color: #8995a3;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Investigation findings */
+
+.findings-panel {
+  margin-bottom: 20px;
+}
+
+.findings-panel > .panel-header {
+  flex-wrap: wrap;
+}
+
+.panel-count {
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border: 1px solid #344255;
+  border-radius: 6px;
+  color: #c5ced8;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.finding-transfer-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+.finding-transfer {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #26313e;
+  border-radius: 9px;
+  background: #0f141b;
+}
+
+.finding-transfer h3 {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.finding-transfer > p {
+  color: #8995a3;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.finding-evidence-list {
+  display: grid;
+  gap: 8px;
+}
+
+.finding-evidence-button {
+  min-width: 0;
+  font-size: 11px;
+}
+
+.finding-evidence-button span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.finding-evidence-button span:last-child {
+  text-align: right;
+}
+
+.finding-review-note {
+  margin: 0;
+  padding: 14px 18px;
+  border-top: 1px solid #202731;
+  color: #8995a3;
+}
+
+/* Event timeline */
+
+.timeline-header {
+  min-height: 64px;
+}
+
+.timeline-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeline-heading span {
+  color: #8995a3;
+  font-size: 12px;
+}
+
+.timeline-filters {
+  align-items: center;
+}
+
+.timeline-list {
+  padding: 18px;
+  max-height: 520px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.timeline-event-content {
+  min-width: 0;
+}
+
+.timeline-source-button {
+  max-width: 100%;
+}
+
+.timeline-source-id {
+  overflow-wrap: anywhere;
+}
+
+/* Tablet */
+
+@media (max-width: 900px) {
+  .dashboard {
+    padding: 18px;
+  }
+
+  .finding-transfer-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .timeline-list {
+    max-height: 480px;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .dashboard {
+    padding: 12px;
+  }
+
+  .header {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 12px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+  }
+
+  .case-info {
+    flex-shrink: 0;
+  }
+
+  .summary-grid {
+    gap: 8px;
+  }
+
+  .panel-header {
+    padding: 14px;
+  }
+
+  .finding-transfer-list {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .finding-transfer {
+    padding: 12px;
+  }
+
+  .finding-evidence-button {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .finding-evidence-button span:last-child {
+    text-align: left;
+  }
+
+  .timeline-filters {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .timeline-search,
+  .timeline-type-filter {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .timeline-usb-filter {
+    align-self: flex-start;
+    padding: 4px 0;
+  }
+
+  .timeline-clear-button {
+    align-self: flex-start;
+  }
+
+  .timeline-list {
+    padding: 12px;
+  }
+
+  .timeline-event {
+    gap: 9px;
+    grid-template-columns: 12px minmax(0, 1fr);
+    padding-bottom: 16px;
+  }
+
+  .timeline-event-content {
+    padding: 11px;
+  }
+}
+/* =========================================================
+   INVESTIGATION FINDINGS — EXPLAINABLE LAYOUT
+========================================================= */
+
+.findings-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 18px 18px 0;
+  padding: 15px;
+  border: 1px solid #29394b;
+  border-radius: 9px;
+  background: #121c28;
+}
+
+.findings-intro-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  height: 24px;
+  border: 1px solid #536a83;
+  border-radius: 50%;
+  color: #a9c8ed;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.findings-intro strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.findings-intro p,
+.findings-message {
+  margin: 0;
+  color: #a5b1bf;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.findings-message {
+  padding: 20px;
+}
+
+.findings-error {
+  color: #f29b9b;
+}
+
+.finding-transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.finding-transfer-heading {
+  margin-bottom: 0;
+}
+
+.finding-file-name {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.finding-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.finding-facts > div {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #26313e;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.finding-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #8995a3;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+}
+
+.finding-facts strong {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.finding-explanation h4,
+.finding-evidence-title h4 {
+  margin: 0 0 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.finding-explanation p,
+.finding-explanation li {
+  color: #a5b1bf;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.finding-explanation p {
+  margin: 0;
+}
+
+.finding-explanation ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.finding-explanation li + li {
+  margin-top: 5px;
+}
+
+.finding-evidence-section {
+  padding-top: 14px;
+  border-top: 1px solid #26313e;
+}
+
+.finding-evidence-title {
+  margin-bottom: 10px;
+}
+
+.finding-evidence-title span {
+  color: #8995a3;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.finding-source-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.finding-source-action {
+  flex-shrink: 0;
+  color: #a9c8ed;
+}
+
+.findings-disclaimer {
+  margin-top: 4px;
+  padding: 16px 18px;
+  border-top: 1px solid #202731;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.findings-disclaimer strong {
+  font-size: 11px;
+}
+
+.findings-disclaimer p {
+  margin: 6px 0 0;
+  color: #8995a3;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+@media (max-width: 600px) {
+  .findings-intro {
+    margin: 12px;
+    padding: 12px;
+  }
+
+  .finding-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .findings-disclaimer {
+    padding: 14px;
+  }
+}

@@ -5,6 +5,8 @@ from app.database import get_db
 from app.models.evidence import Evidence
 from app.models.event import Event
 from app.services.event_extraction import EventExtractionService
+from app.services.investigation_analysis import InvestigationAnalysisService
+
 
 
 router = APIRouter(
@@ -129,3 +131,32 @@ def get_case_events(
             for event, filename in rows
         ],
     }
+
+
+@router.get("/cases/{case_id}/analysis")
+def analyze_case(
+    case_id: int,
+    db: Session = Depends(get_db),
+):
+    """Return explainable investigation findings for a case."""
+    case_exists = (
+        db.query(Evidence.id)
+        .filter(Evidence.case_id == case_id)
+        .first()
+    )
+
+    if case_exists is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No evidence found for case {case_id}.",
+        )
+
+    try:
+        service = InvestigationAnalysisService(db)
+        return service.analyze_case(case_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to analyze investigation events.",
+        ) from exc
+

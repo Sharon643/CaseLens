@@ -54,6 +54,40 @@ type CaseTimelineResponse = {
 };
 
 
+type TransferEvidence = {
+  event_id: number;
+  evidence_id: number;
+  evidence_filename: string;
+};
+
+type PossibleTransfer = {
+  timestamp: string | null;
+  filename: string;
+  supporting_evidence: TransferEvidence[];
+};
+
+type InvestigationFinding = {
+  event_id: number | null;
+  evidence_id: number | null;
+  evidence_filename: string | null;
+  timestamp: string | null;
+  severity: string;
+  rule: string;
+  title: string;
+  reason: string;
+  description: string;
+  transfers?: PossibleTransfer[];
+};
+
+type CaseAnalysisResponse = {
+  case_id: number;
+  event_count: number;
+  finding_count: number;
+  findings: InvestigationFinding[];
+};
+
+
+
 function App() {
   const CASE_ID = 1;
 
@@ -75,6 +109,15 @@ function App() {
 
   const [timelineError, setTimelineError] =
     useState<string | null>(null);
+
+  const [analysis, setAnalysis] =
+    useState<CaseAnalysisResponse | null>(null);
+
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+
+  const [analysisError, setAnalysisError] =
+    useState<string | null>(null);
+
 
   const [timelineSearch, setTimelineSearch] = useState("");
   const [timelineTypeFilter, setTimelineTypeFilter] = useState("all");
@@ -174,7 +217,9 @@ function App() {
 
     loadCase();
   }, []);
-/*LOAD TIMELINE*/
+  /* =========================================================
+     LOAD TIMELINE
+  ========================================================= */
 
   
   useEffect(() => {
@@ -228,6 +273,46 @@ function App() {
     };
   }, []);
 
+  /* =========================================================
+     LOAD ANALYSIS
+  ========================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAnalysis() {
+      setAnalysisLoading(true);
+      setAnalysisError(null);
+
+      try {
+        const response = await api.get<CaseAnalysisResponse>(
+          `/evidence/cases/${CASE_ID}/analysis`
+        );
+
+        if (!cancelled) {
+          setAnalysis(response.data);
+        }
+      } catch (err) {
+        console.error("Failed to load investigation analysis:", err);
+
+        if (!cancelled) {
+          setAnalysisError(
+            "Unable to load investigation findings."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setAnalysisLoading(false);
+        }
+      }
+    }
+
+    void loadAnalysis();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
 
   /* =========================================================
@@ -408,6 +493,18 @@ function App() {
     ...new Set(timelineEvents.map((event) => event.event_type)),
   ].sort();
 
+  const groupedTransferFinding = analysis?.findings.find(
+    (finding) => finding.rule === "multiple_usb_writes"
+  );
+
+  const possibleTransfers =
+    groupedTransferFinding?.transfers ?? [];
+
+  const standaloneTransferFindings =
+    analysis?.findings.filter(
+      (finding) =>
+        finding.rule === "possible_usb_file_transfer"
+    ) ?? [];
 
 
   /* =========================================================
@@ -1379,83 +1476,236 @@ function App() {
 
         </section>
 
+        {/* INVESTIGATION FINDINGS */}
+        <section className="panel findings-panel">
+          <div className="panel-header">
+            <div>
+              <h2>Investigation Findings</h2>
+              <p>Potential incidents identified from evidence records</p>
+            </div>
+
+            <span className="panel-count">
+              {possibleTransfers.length} items to review
+            </span>
+          </div>
+
+          <div className="findings-intro">
+            <div className="findings-intro-icon">i</div>
+            <div>
+              <strong>What does this mean?</strong>
+              <p>
+                CaseLens detected records that may indicate files were copied
+                to a USB device. Related records are grouped together to help
+                you investigate the same activity across different sources.
+                This is an investigative lead, not proof of wrongdoing.
+              </p>
+            </div>
+          </div>
+
+          {analysisLoading && (
+            <p className="findings-message">
+              Analyzing investigation events...
+            </p>
+          )}
+
+          {analysisError && (
+            <p className="findings-message findings-error">
+              {analysisError}
+            </p>
+          )}
+
+          {!analysisLoading &&
+            !analysisError &&
+            possibleTransfers.length === 0 && (
+              <p className="findings-message">
+                No grouped USB transfer indicators were found.
+              </p>
+            )}
+
+          {!analysisLoading &&
+            !analysisError &&
+            possibleTransfers.length > 0 && (
+              <div className="finding-transfer-list">
+                {possibleTransfers.map((transfer, index) => (
+                  <article
+                    className="finding-transfer"
+                    key={`${transfer.timestamp}-${transfer.filename}`}
+                  >
+                    <div className="finding-transfer-heading">
+                      <span className="finding-number">
+                        Finding {index + 1}
+                      </span>
+
+                      <span className="finding-severity">
+                        REVIEW REQUIRED
+                      </span>
+                    </div>
+
+                    <h3 className="finding-file-name">
+                      {transfer.filename}
+                    </h3>
+
+                    <div className="finding-facts">
+                      <div>
+                        <span className="finding-label">
+                          RECORDED TIME
+                        </span>
+                        <strong>
+                          {transfer.timestamp
+                            ? `${new Date(
+                                transfer.timestamp
+                              ).toLocaleString("en-IN", {
+                                dateStyle: "medium",
+                                timeStyle: "medium",
+                                timeZone: "UTC",
+                              })} UTC`
+                            : "Not available"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span className="finding-label">
+                          RELATED RECORDS
+                        </span>
+                        <strong>
+                          {transfer.supporting_evidence.length} records
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="finding-explanation">
+                      <h4>Why was this flagged?</h4>
+                      <p>
+                        Multiple evidence records describe activity involving
+                        this file and removable media. The matching timestamp
+                        and filename help correlate the records, but the
+                        records must be checked to determine whether they
+                        describe the same real-world action.
+                      </p>
+                    </div>
+
+                    <div className="finding-explanation">
+                      <h4>What should you verify?</h4>
+                      <ul>
+                        <li>
+                          Confirm whether the USB device and file transfer
+                          were authorized.
+                        </li>
+                        <li>
+                          Compare the original records, timestamps, and
+                          device identifiers.
+                        </li>
+                        <li>
+                          Check file hashes and surrounding system activity
+                          where those records are available.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="finding-evidence-section">
+                      <div className="finding-evidence-title">
+                        <h4>Supporting evidence</h4>
+                        <span>
+                          Open a source record to inspect its contents
+                        </span>
+                      </div>
+
+                      <div className="finding-evidence-list">
+                        {transfer.supporting_evidence.map((source) => (
+                          <button
+                            type="button"
+                            className="finding-evidence-button"
+                            key={source.event_id}
+                            onClick={() =>
+                              setSelectedEvidenceId(source.evidence_id)
+                            }
+                          >
+                            <span className="finding-source-name">
+                              {source.evidence_filename}
+                            </span>
+                            <span className="finding-source-action">
+                              View record →
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+
+          <div className="findings-disclaimer">
+            <strong>Investigator note</strong>
+            <p>
+              Automated rules identify patterns for review. They do not
+              establish intent, authorization, or responsibility. Conclusions
+              should be based on verified evidence and corroborating context.
+            </p>
+          </div>
+        </section>
+
 
         {/* ===================================================
             TIMELINE
         =================================================== */}
 
         <section className="panel timeline-panel">
-
-          <div className="panel-header">
-
-            <div>
-
-             
-            <div className="panel-header timeline-header">
-              <div>
-                <h2>Event Timeline</h2>
-                <span>
-                  Showing {filteredTimelineEvents.length} of{" "}
-                  {timelineEvents.length} events
-                </span>
-              </div>
-            </div>
-
-            <div className="timeline-filters">
-              <input
-                type="search"
-                className="timeline-search"
-                placeholder="Search events, files..."
-                value={timelineSearch}
-                onChange={(event) => setTimelineSearch(event.target.value)}
-                aria-label="Search timeline events"
-              />
-
-              <select
-                className="timeline-type-filter"
-                value={timelineTypeFilter}
-                onChange={(event) => setTimelineTypeFilter(event.target.value)}
-                aria-label="Filter by event type"
-              >
-                <option value="all">All event types</option>
-                {timelineEventTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.replaceAll("_", " ")}
-                  </option>
-                ))}
-              </select>
-
-              <label className="timeline-usb-filter">
-                <input
-                  type="checkbox"
-                  checked={usbOnly}
-                  onChange={(event) => setUsbOnly(event.target.checked)}
-                />
-                USB activity
-              </label>
-
-              <button
-                type="button"
-                className="timeline-clear-button"
-                onClick={() => {
-                  setTimelineSearch("");
-                  setTimelineTypeFilter("all");
-                  setUsbOnly(false);
-                }}
-              >
-                Clear
-              </button>
-            </div>
-
-
+          <div className="panel-header timeline-header">
+            <div className="timeline-heading">
+              <h2>Event Timeline</h2>
               <span>
-                {summary.event_count} events
+                Showing {filteredTimelineEvents.length} of{" "}
+                {timelineEvents.length} events
               </span>
-
             </div>
-
           </div>
 
+          <div className="timeline-filters">
+            <input
+              type="search"
+              className="timeline-search"
+              placeholder="Search events, files..."
+              value={timelineSearch}
+              onChange={(event) => setTimelineSearch(event.target.value)}
+              aria-label="Search timeline events"
+            />
+
+            <select
+              className="timeline-type-filter"
+              value={timelineTypeFilter}
+              onChange={(event) => setTimelineTypeFilter(event.target.value)}
+              aria-label="Filter by event type"
+            >
+              <option value="all">All event types</option>
+              {timelineEventTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+
+            <label className="timeline-usb-filter">
+              <input
+                type="checkbox"
+                checked={usbOnly}
+                onChange={(event) => setUsbOnly(event.target.checked)}
+              />
+              USB activity
+            </label>
+
+            <button
+              type="button"
+              className="timeline-clear-button"
+              onClick={() => {
+                setTimelineSearch("");
+                setTimelineTypeFilter("all");
+                setUsbOnly(false);
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
 
 
           <div className="timeline-list">
