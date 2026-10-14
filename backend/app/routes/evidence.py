@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -145,3 +146,57 @@ def get_evidence(
         ),
         "extracted_text": extracted_text,
     }
+
+@router.get("/{evidence_id}/content", response_class=PlainTextResponse)
+def get_evidence_content(
+    case_id: int,
+    evidence_id: int,
+    db: Session = Depends(get_db),
+):
+    evidence = (
+        db.query(Evidence)
+        .filter(
+            Evidence.id == evidence_id,
+            Evidence.case_id == case_id,
+        )
+        .first()
+    )
+
+    if not evidence:
+        raise HTTPException(
+            status_code=404,
+            detail="Evidence not found",
+        )
+
+    file_path = Path(evidence.file_path)
+
+    if not file_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Evidence file not found on disk",
+        )
+
+    # This endpoint is for readable text files only.
+    allowed_extensions = {
+        ".txt", ".log", ".csv", ".json", ".xml",
+        ".md", ".eml", ".yaml", ".yml",
+    }
+
+    if file_path.suffix.lower() not in allowed_extensions:
+        raise HTTPException(
+            status_code=415,
+            detail="Original-file viewer currently supports text-based files only.",
+        )
+
+    try:
+        content = file_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not read the evidence file.",
+        ) from exc
+
+    return content

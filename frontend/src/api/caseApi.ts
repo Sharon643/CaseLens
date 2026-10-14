@@ -286,3 +286,14 @@ export async function getEvidenceDetails(
 
   return response.data;
 }
+export async function getOriginalEvidenceContent(
+  caseId: number,
+  evidenceId: number
+): Promise<string> {
+  const response = await api.get<string>(
+    `/cases/${caseId}/evidence/${evidenceId}/content`,
+    { responseType: "text" }
+  );
+
+  return response.data;
+}

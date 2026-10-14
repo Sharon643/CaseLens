@@ -5,6 +5,7 @@ import {
   getCaseGraph,
   getGraphNodeDetails,
   getEvidenceDetails,
+  getOriginalEvidenceContent,
   api,
 } from "./api/caseApi";
 
@@ -85,6 +86,59 @@ type CaseAnalysisResponse = {
   finding_count: number;
   findings: InvestigationFinding[];
 };
+
+type SourceAssessment = {
+  label: "Supporting" | "Consistent" | "Inconclusive";
+  explanation: string;
+};
+
+function assessSourceConsistency(
+  sourceText: string,
+  filename: string,
+  transferTimestamp: string | null
+): SourceAssessment {
+  const text = sourceText.toLowerCase();
+  const targetFilename = filename.toLowerCase();
+
+  const mentionsFilename = text.includes(targetFilename);
+
+  const mentionsRemovableMedia =
+    /\b(usb|removable media|flash drive|external drive)\b/i.test(text);
+
+  const describesTransfer =
+    /\b(write|writes|wrote|written|copy|copies|copied|transfer|transfers|transferred|export|exports|exported)\b/i.test(
+      text
+    );
+
+  const hasTransferTimestamp =
+    transferTimestamp !== null && text.includes(transferTimestamp);
+
+  if (
+    mentionsFilename &&
+    mentionsRemovableMedia &&
+    describesTransfer
+  ) {
+    return {
+      label: "Supporting",
+      explanation:
+        "The source explicitly mentions the file, removable media, and a transfer-related action.",
+    };
+  }
+
+  if (mentionsFilename || hasTransferTimestamp || mentionsRemovableMedia) {
+    return {
+      label: "Consistent",
+      explanation:
+        "The source contains a relevant detail but does not independently establish the suspected transfer.",
+    };
+  }
+
+  return {
+    label: "Inconclusive",
+    explanation:
+      "The available source text does not contain enough relevant detail to assess this transfer.",
+  };
+}
 
 
 
@@ -171,6 +225,11 @@ function App() {
 
   const [evidenceEventsError, setEvidenceEventsError] =
     useState<string | null>(null);
+
+  const [originalFileOpen, setOriginalFileOpen] = useState(false);
+  const [originalFileContent, setOriginalFileContent] = useState("");
+  const [originalFileLoading, setOriginalFileLoading] = useState(false);
+  const [originalFileError, setOriginalFileError] = useState<string | null>(null);
 
 
   /* =========================================================
@@ -463,6 +522,37 @@ function App() {
     setEvidenceError(null);
     setEvidenceEvents([]);
     setEvidenceEventsError(null);
+    setOriginalFileOpen(false);
+    setOriginalFileContent("");
+    setOriginalFileError(null);
+  };
+  const openOriginalFile = async () => {
+  if (selectedEvidenceId === null) return;
+
+  setOriginalFileOpen(true);
+  setOriginalFileLoading(true);
+  setOriginalFileError(null);
+  setOriginalFileContent("");
+
+  try {
+    const content = await getOriginalEvidenceContent(
+      CASE_ID,
+      selectedEvidenceId
+    );
+
+    setOriginalFileContent(content);
+  } catch (error) {
+    console.error("Failed to open original evidence file:", error);
+    setOriginalFileError("Unable to open the original evidence file.");
+  } finally {
+    setOriginalFileLoading(false);
+  }
+  };
+
+  const closeOriginalFile = () => {
+    setOriginalFileOpen(false);
+    setOriginalFileContent("");
+    setOriginalFileError(null);
   };
 
   
@@ -1731,24 +1821,48 @@ function App() {
                   </thead>
 
                   <tbody>
-                    {transfer.supporting_evidence.map((source) => (
-                      <tr key={source.event_id}>
-                        <td>{source.evidence_filename}</td>
-                        <td>#{source.evidence_id}</td>
-                        <td>#{source.event_id}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="finding-timeline-button"
-                            onClick={() =>
-                              setSelectedEvidenceId(source.evidence_id)
-                            }
-                          >
-                            Inspect evidence →
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {transfer.supporting_evidence.map((source) => {
+                      const matchingEvent = timelineEvents.find(
+                        (event) => event.id === source.event_id
+                      );
+
+                      const assessment = assessSourceConsistency(
+                        [
+                          matchingEvent?.source_text ?? "",
+                          matchingEvent?.description ?? "",
+                        ].join(" "),
+                        transfer.filename,
+                        transfer.timestamp
+                      );
+
+                      return (
+                        <tr key={source.event_id}>
+                          <td>
+                            <div>{source.evidence_filename}</div>
+
+                            <div className="source-assessment">
+                              <strong>{assessment.label}</strong>
+                              <p>{assessment.explanation}</p>
+                            </div>
+                          </td>
+
+                          <td>#{source.evidence_id}</td>
+                          <td>#{source.event_id}</td>
+
+                          <td>
+                            <button
+                              type="button"
+                              className="finding-timeline-button"
+                              onClick={() =>
+                                setSelectedEvidenceId(source.evidence_id)
+                              }
+                            >
+                              Inspect evidence →
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1953,7 +2067,9 @@ function App() {
       {selectedEvidenceId !== null && (
 
         <div
-          className="evidence-viewer-overlay"
+          className={`evidence-viewer-overlay ${
+            originalFileOpen ? "with-original-file" : ""
+          }`}
           onClick={closeEvidenceViewer}
         >
 
@@ -1987,14 +2103,26 @@ function App() {
               </div>
 
 
-              <button
-                type="button"
-                className="evidence-viewer-close"
-                onClick={closeEvidenceViewer}
-                aria-label="Close evidence viewer"
-              >
-                ×
-              </button>
+              <div className="evidence-viewer-actions">
+                <button
+                  type="button"
+                  className="open-original-file-button"
+                  onClick={openOriginalFile}
+                  disabled={evidenceLoading || !evidenceDetails}
+                >
+                  
+                  Open Original File
+                </button>
+
+                <button
+                  type="button"
+                  className="evidence-viewer-close"
+                  onClick={closeEvidenceViewer}
+                  aria-label="Close evidence viewer"
+                >
+                  ×
+                </button>
+              </div>
 
             </div>
 
@@ -2325,7 +2453,62 @@ function App() {
               )}
 
           </div>
+            {originalFileOpen && (
+              <section
+                className="original-file-panel"
+                aria-label="Original evidence file"
+              >
+                <header className="original-file-header">
+                  <div>
+                    <div className="evidence-viewer-label">
+                      ORIGINAL EVIDENCE
+                    </div>
 
+                    <h2>
+                      {evidenceDetails?.original_filename ?? "Evidence file"}
+                    </h2>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="evidence-viewer-close"
+                    onClick={closeOriginalFile}
+                    aria-label="Close original file panel"
+                  >
+                    ×
+                  </button>
+                </header>
+
+                <div className="original-file-meta">
+                  Read-only view · Original file is not modified
+                </div>
+
+                {originalFileLoading && (
+                  <div className="evidence-viewer-loading">
+                    Loading original file...
+                  </div>
+                )}
+
+                {originalFileError && (
+                  <div className="details-error">
+                    {originalFileError}
+                  </div>
+                )}
+
+                {!originalFileLoading && !originalFileError && (
+                  <div className="original-file-content">
+                    {originalFileContent.split(/\r?\n/).map((line, index) => (
+                      <div className="original-file-line" key={index}>
+                        <span className="original-file-line-number">
+                          {index + 1}
+                        </span>
+                        <pre>{line || " "}</pre>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
         </div>
 
       )}

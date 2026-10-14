@@ -2494,3 +2494,144 @@ body,
     margin-left: 12px;
   }
 }
+.source-assessment {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.source-assessment p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.evidence-viewer-overlay.with-original-file {
+  gap: 16px;
+  align-items: stretch;
+  overflow: auto;
+}
+
+.evidence-viewer-overlay.with-original-file .evidence-viewer {
+  width: min(760px, 50vw);
+  max-height: calc(100vh - 60px);
+}
+
+.evidence-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.open-original-file-button {
+  padding: 9px 12px;
+  border: 1px solid #35465b;
+  border-radius: 7px;
+  background: #182433;
+  color: #dce9fa;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.open-original-file-button:hover {
+  background: #22354b;
+}
+
+.open-original-file-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.original-file-panel {
+  width: min(760px, 50vw);
+  min-width: 0;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #111318;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+}
+
+.original-file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.original-file-header h2 {
+  margin: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.original-file-meta {
+  padding: 12px 18px;
+  color: #8b98a8;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.original-file-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 0;
+  background: #0b0e12;
+}
+
+.original-file-line {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  min-height: 26px;
+  font: 12px/26px "Cascadia Code", Consolas, monospace;
+}
+
+.original-file-line-number {
+  padding-right: 12px;
+  text-align: right;
+  user-select: none;
+  color: #66717e;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.original-file-line pre {
+  margin: 0;
+  padding: 0 16px;
+  color: #d4dce6;
+  white-space: pre;
+  overflow: visible;
+}
+
+@media (max-width: 900px) {
+  .evidence-viewer-overlay.with-original-file {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .evidence-viewer-overlay.with-original-file .evidence-viewer,
+  .original-file-panel {
+    width: 100%;
+    max-height: 75vh;
+  }
+}
+
+@media (max-width: 600px) {
+  .evidence-viewer-actions {
+    gap: 6px;
+  }
+
+  .open-original-file-button {
+    padding: 8px;
+    font-size: 11px;
+  }
+}
