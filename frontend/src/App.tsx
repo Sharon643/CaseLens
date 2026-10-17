@@ -6,7 +6,9 @@ import {
   getGraphNodeDetails,
   getEvidenceDetails,
   getOriginalEvidenceContent,
+  getOriginalEvidenceImageUrl,
   api,
+  getCaseEvidenceFiles,
 } from "./api/caseApi";
 
 import type {
@@ -14,6 +16,8 @@ import type {
   CaseGraph,
   GraphNodeDetails,
   EvidenceDetails,
+  OriginalEvidenceFile,
+  CaseEvidenceFilesResponse,
 } from "./api/caseApi";
 
 import type { Node } from "@xyflow/react";
@@ -171,7 +175,11 @@ function App() {
 
   const [analysisError, setAnalysisError] =
     useState<string | null>(null);
-
+  const [caseFiles, setCaseFiles] = useState<OriginalEvidenceFile[]>([]);
+  const [caseFilesLoading, setCaseFilesLoading] = useState(true);
+  const [caseFilesError, setCaseFilesError] = useState<string | null>(null);
+  const [fileSearch, setFileSearch] = useState("");
+  const [originalFilesPanelOpen, setOriginalFilesPanelOpen] = useState(false);
 
   const [timelineSearch, setTimelineSearch] = useState("");
   const [timelineTypeFilter, setTimelineTypeFilter] = useState("all");
@@ -278,6 +286,43 @@ function App() {
 
     loadCase();
   }, []);
+   /* =========================================================
+     LOAD EVIDENCES
+  ========================================================= */
+  useEffect(() => {
+  let cancelled = false;
+
+  async function loadCaseFiles() {
+    setCaseFilesLoading(true);
+    setCaseFilesError(null);
+
+    try {
+      const response: CaseEvidenceFilesResponse =
+        await getCaseEvidenceFiles(CASE_ID);
+
+      if (!cancelled) {
+        setCaseFiles(response.files);
+      }
+    } catch (error) {
+      console.error("Failed to load original evidence files:", error);
+
+      if (!cancelled) {
+        setCaseFilesError("Unable to load the original evidence file list.");
+      }
+    } finally {
+      if (!cancelled) {
+        setCaseFilesLoading(false);
+      }
+    }
+  }
+
+  void loadCaseFiles();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
   /* =========================================================
      LOAD TIMELINE
   ========================================================= */
@@ -516,6 +561,12 @@ function App() {
      CLOSE EVIDENCE VIEWER
   ========================================================= */
 
+  const closeOriginalFile = () => {
+  setOriginalFileOpen(false);
+  setOriginalFileContent("");
+  setOriginalFileError(null);
+  };
+
   const closeEvidenceViewer = () => {
     setSelectedEvidenceId(null);
     setEvidenceDetails(null);
@@ -527,35 +578,38 @@ function App() {
     setOriginalFileError(null);
   };
   const openOriginalFile = async () => {
-  if (selectedEvidenceId === null) return;
+    if (selectedEvidenceId === null || !evidenceDetails) return;
 
-  setOriginalFileOpen(true);
-  setOriginalFileLoading(true);
-  setOriginalFileError(null);
-  setOriginalFileContent("");
-
-  try {
-    const content = await getOriginalEvidenceContent(
-      CASE_ID,
-      selectedEvidenceId
-    );
-
-    setOriginalFileContent(content);
-  } catch (error) {
-    console.error("Failed to open original evidence file:", error);
-    setOriginalFileError("Unable to open the original evidence file.");
-  } finally {
-    setOriginalFileLoading(false);
-  }
-  };
-
-  const closeOriginalFile = () => {
-    setOriginalFileOpen(false);
-    setOriginalFileContent("");
+    setOriginalFileOpen(true);
+    setOriginalFileLoading(true);
     setOriginalFileError(null);
+    setOriginalFileContent("");
+
+    try {
+      if (!isImageEvidence(evidenceDetails.original_filename)) {
+        const content = await getOriginalEvidenceContent(
+          CASE_ID,
+          selectedEvidenceId
+        );
+        setOriginalFileContent(content);
+      }
+    } catch (error) {
+      console.error("Failed to open original evidence file:", error);
+      setOriginalFileError("Unable to open the original evidence file.");
+    } finally {
+      setOriginalFileLoading(false);
+    }
   };
 
   
+  const isImageEvidence = (filename: string | undefined) =>
+    /\.(png|jpe?g|webp)$/i.test(filename ?? "");
+
+  const originalImageUrl =
+    selectedEvidenceId !== null && evidenceDetails
+      ? getOriginalEvidenceImageUrl(CASE_ID, selectedEvidenceId)
+      : "";
+
   const filteredTimelineEvents = timelineEvents.filter((event) => {
     const searchableText = [
       event.event_type,
@@ -1886,6 +1940,23 @@ function App() {
         </section>
 
 
+        {/* ORIGINAL FILES LAUNCHER */}
+        <section className="panel original-files-launcher">
+          <div className="panel-header">
+            <div>
+              <h2>Original Evidence Files</h2>
+              <p>Browse and inspect the original files collected for this case.</p>
+            </div>
+            <button
+              type="button"
+              className="finding-timeline-button"
+              onClick={() => setOriginalFilesPanelOpen(true)}
+            >
+              View all files ({caseFiles.length}) →
+            </button>
+          </div>
+        </section>
+
         {/* ===================================================
             TIMELINE
         =================================================== */}
@@ -2059,6 +2130,99 @@ function App() {
 
       </main>
 
+
+      {/* ORIGINAL FILES PANEL */}
+      {originalFilesPanelOpen && (
+        <div
+          className="original-files-overlay"
+          onClick={() => setOriginalFilesPanelOpen(false)}
+        >
+          <section
+            className="original-files-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="original-files-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="panel-header">
+              <div>
+                <h2 id="original-files-title">Original Evidence Files</h2>
+                <p>{caseFiles.length} files associated with this case</p>
+              </div>
+              <button
+                type="button"
+                className="evidence-viewer-close"
+                onClick={() => setOriginalFilesPanelOpen(false)}
+                aria-label="Close original files panel"
+              >
+                ×
+              </button>
+            </div>
+
+            <input
+              type="search"
+              className="original-files-search"
+              placeholder="Search filenames..."
+              value={fileSearch}
+              onChange={(event) => setFileSearch(event.target.value)}
+            />
+
+            {caseFilesLoading && (
+              <p className="empty-detail">Loading original files...</p>
+            )}
+            {caseFilesError && (
+              <p className="details-error">{caseFilesError}</p>
+            )}
+
+            {!caseFilesLoading && !caseFilesError && (
+              <div className="original-files-list">
+                {caseFiles
+                  .filter((file) =>
+                    file.original_filename
+                      .toLowerCase()
+                      .includes(fileSearch.trim().toLowerCase())
+                  )
+                  .map((file) => (
+                    <article className="original-files-item" key={file.id}>
+                      <div className="original-files-info">
+                        <strong>{file.original_filename}</strong>
+                        <span>
+                          Evidence #{file.id}
+                          {" · "}
+                          {file.file_type || "Unknown type"}
+                          {" · "}
+                          {file.available_on_disk ? "Available" : "Missing on disk"}
+                        </span>
+                        {file.file_size != null && (
+                          <span>{(file.file_size / 1024).toFixed(1)} KB</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="finding-timeline-button"
+                        disabled={!file.available_on_disk}
+                        onClick={() => {
+                          setOriginalFilesPanelOpen(false);
+                          setSelectedEvidenceId(file.id);
+                        }}
+                      >
+                        Open evidence →
+                      </button>
+                    </article>
+                  ))}
+
+                {caseFiles.filter((file) =>
+                  file.original_filename
+                    .toLowerCase()
+                    .includes(fileSearch.trim().toLowerCase())
+                ).length === 0 && (
+                  <p className="empty-detail">No matching files found.</p>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
       {/* =====================================================
           EVIDENCE VIEWER
@@ -2349,7 +2513,6 @@ function App() {
                       </article>
                     ))}
                   </section>
-
                   {/* =========================================
                       EXTRACTED CONTENT
                   ========================================= */}
@@ -2453,11 +2616,12 @@ function App() {
               )}
 
           </div>
-            {originalFileOpen && (
-              <section
-                className="original-file-panel"
-                aria-label="Original evidence file"
-              >
+              {originalFileOpen && (
+                <section
+                  className="original-file-panel"
+                  aria-label="Original evidence file"
+                  onClick={(event) => event.stopPropagation()}
+                >
                 <header className="original-file-header">
                   <div>
                     <div className="evidence-viewer-label">
@@ -2496,16 +2660,28 @@ function App() {
                 )}
 
                 {!originalFileLoading && !originalFileError && (
-                  <div className="original-file-content">
-                    {originalFileContent.split(/\r?\n/).map((line, index) => (
-                      <div className="original-file-line" key={index}>
-                        <span className="original-file-line-number">
-                          {index + 1}
-                        </span>
-                        <pre>{line || " "}</pre>
-                      </div>
-                    ))}
-                  </div>
+                  isImageEvidence(evidenceDetails?.original_filename) ? (
+                    <div className="original-image-content">
+                      <img
+                        src={originalImageUrl}
+                        alt={evidenceDetails?.original_filename ?? "Evidence image"}
+                        onError={() =>
+                          setOriginalFileError("Unable to load the original image.")
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <div className="original-file-content">
+                      {originalFileContent.split(/\r?\n/).map((line, index) => (
+                        <div className="original-file-line" key={index}>
+                          <span className="original-file-line-number">
+                            {index + 1}
+                          </span>
+                          <pre>{line || " "}</pre>
+                        </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </section>
             )}

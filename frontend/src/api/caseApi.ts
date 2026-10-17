@@ -297,3 +297,35 @@ export async function getOriginalEvidenceContent(
 
   return response.data;
 }
+export function getOriginalEvidenceImageUrl(
+  caseId: number,
+  evidenceId: number
+): string {
+  return `http://127.0.0.1:8000/cases/${caseId}/evidence/${evidenceId}/image`;
+}
+export interface OriginalEvidenceFile {
+  id: number;
+  original_filename: string;
+  file_type: string | null;
+  file_size: number | null;
+  sha256_hash: string | null;
+  uploaded_at: string | null;
+  extraction_status: string | null;
+  available_on_disk: boolean;
+}
+
+export interface CaseEvidenceFilesResponse {
+  case_id: number;
+  count: number;
+  files: OriginalEvidenceFile[];
+}
+
+export async function getCaseEvidenceFiles(
+  caseId: number
+): Promise<CaseEvidenceFilesResponse> {
+  const response = await api.get<CaseEvidenceFilesResponse>(
+    `/cases/${caseId}/evidence`
+  );
+
+  return response.data;
+}
