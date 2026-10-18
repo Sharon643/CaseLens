@@ -44,7 +44,74 @@ import OriginalFilesModal from "./components/OriginalFilesModal";
 
 const CASE_ID = 1;
 
+type PanelId =
+  | "overview"
+  | "graph"
+  | "entities"
+  | "findings"
+  | "correlation"
+  | "timeline"
+  | "files";
+
+interface NavItem {
+  id: PanelId;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: "⬡",
+    description: "Case summary & stats",
+  },
+  {
+    id: "graph",
+    label: "Graph",
+    icon: "◈",
+    description: "Investigation graph",
+  },
+  {
+    id: "entities",
+    label: "Entities",
+    icon: "◎",
+    description: "Actors, devices & files",
+  },
+  {
+    id: "findings",
+    label: "Findings",
+    icon: "⚑",
+    description: "Investigation findings",
+  },
+  {
+    id: "correlation",
+    label: "Correlation",
+    icon: "⟺",
+    description: "Evidence cross-reference",
+  },
+  {
+    id: "timeline",
+    label: "Timeline",
+    icon: "⏲",
+    description: "Chronological events",
+  },
+  {
+    id: "files",
+    label: "Files",
+    icon: "⊟",
+    description: "Original evidence files",
+  },
+];
+
 function App() {
+  /* =========================================================
+     NAVIGATION STATE
+  ========================================================= */
+
+  const [activePanel, setActivePanel] = useState<PanelId>("overview");
+
   /* =========================================================
      CASE STATE
   ========================================================= */
@@ -129,7 +196,6 @@ function App() {
         setLoading(false);
       }
     }
-
     loadCase();
   }, []);
 
@@ -139,28 +205,21 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadCaseFiles() {
       setCaseFilesLoading(true);
       setCaseFilesError(null);
-
       try {
         const response: CaseEvidenceFilesResponse = await getCaseEvidenceFiles(CASE_ID);
         if (!cancelled) setCaseFiles(response.files);
       } catch (err) {
         console.error("Failed to load original evidence files:", err);
-        if (!cancelled)
-          setCaseFilesError("Unable to load the original evidence file list.");
+        if (!cancelled) setCaseFilesError("Unable to load the original evidence file list.");
       } finally {
         if (!cancelled) setCaseFilesLoading(false);
       }
     }
-
     void loadCaseFiles();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   /* =========================================================
@@ -169,46 +228,32 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadTimeline() {
       setTimelineLoading(true);
       setTimelineError(null);
-
       try {
         const response = await api.get<CaseTimelineResponse>(
           `/evidence/cases/${CASE_ID}/events`
         );
-
         if (!cancelled) {
-          const events = Array.isArray(response.data.events)
-            ? response.data.events
-            : [];
-
+          const events = Array.isArray(response.data.events) ? response.data.events : [];
           setTimelineEvents(
             [...events].sort((a, b) => {
               if (!a.timestamp) return 1;
               if (!b.timestamp) return -1;
-              return (
-                new Date(a.timestamp).getTime() -
-                new Date(b.timestamp).getTime()
-              );
+              return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
             })
           );
         }
       } catch (err) {
         console.error("Failed to load case timeline:", err);
-        if (!cancelled)
-          setTimelineError("Unable to load the investigation timeline.");
+        if (!cancelled) setTimelineError("Unable to load the investigation timeline.");
       } finally {
         if (!cancelled) setTimelineLoading(false);
       }
     }
-
     void loadTimeline();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   /* =========================================================
@@ -217,11 +262,9 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadAnalysis() {
       setAnalysisLoading(true);
       setAnalysisError(null);
-
       try {
         const response = await api.get<CaseAnalysisResponse>(
           `/evidence/cases/${CASE_ID}/analysis`
@@ -229,18 +272,13 @@ function App() {
         if (!cancelled) setAnalysis(response.data);
       } catch (err) {
         console.error("Failed to load investigation analysis:", err);
-        if (!cancelled)
-          setAnalysisError("Unable to load investigation findings.");
+        if (!cancelled) setAnalysisError("Unable to load investigation findings.");
       } finally {
         if (!cancelled) setAnalysisLoading(false);
       }
     }
-
     void loadAnalysis();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   /* =========================================================
@@ -253,16 +291,13 @@ function App() {
       setDetailsError(null);
       return;
     }
-
     const nodeId = selectedNode.id;
     const separatorIndex = nodeId.indexOf(":");
-
     if (separatorIndex === -1) {
       setNodeDetails(null);
       setDetailsError("Unable to determine graph node type.");
       return;
     }
-
     const nodeType = nodeId.substring(0, separatorIndex);
     const nodeValue = nodeId.substring(separatorIndex + 1);
 
@@ -270,7 +305,6 @@ function App() {
       setDetailsLoading(true);
       setDetailsError(null);
       setNodeDetails(null);
-
       try {
         const details = await getGraphNodeDetails(CASE_ID, nodeType, nodeValue);
         setNodeDetails(details);
@@ -281,7 +315,6 @@ function App() {
         setDetailsLoading(false);
       }
     }
-
     loadNodeDetails();
   }, [selectedNode]);
 
@@ -297,7 +330,6 @@ function App() {
       setEvidenceEventsError(null);
       return;
     }
-
     const evidenceId = selectedEvidenceId;
     let cancelled = false;
 
@@ -305,7 +337,6 @@ function App() {
       setEvidenceLoading(true);
       setEvidenceError(null);
       setEvidenceDetails(null);
-
       try {
         const details = await getEvidenceDetails(CASE_ID, evidenceId);
         if (!cancelled) setEvidenceDetails(details);
@@ -321,7 +352,6 @@ function App() {
       setEvidenceEventsLoading(true);
       setEvidenceEventsError(null);
       setEvidenceEvents([]);
-
       try {
         const response = await api.get<EvidenceEventsResponse>(
           `/evidence/${evidenceId}/events`
@@ -333,8 +363,7 @@ function App() {
         }
       } catch (err) {
         console.error("Failed to load evidence-related events:", err);
-        if (!cancelled)
-          setEvidenceEventsError("Related events are not available yet.");
+        if (!cancelled) setEvidenceEventsError("Related events are not available yet.");
       } finally {
         if (!cancelled) setEvidenceEventsLoading(false);
       }
@@ -342,10 +371,7 @@ function App() {
 
     void loadEvidence();
     void loadEvidenceEvents();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedEvidenceId]);
 
   /* =========================================================
@@ -371,22 +397,14 @@ function App() {
 
   const openOriginalFile = async () => {
     if (selectedEvidenceId === null || !evidenceDetails) return;
-
     setOriginalFileOpen(true);
     setOriginalFileLoading(true);
     setOriginalFileError(null);
     setOriginalFileContent("");
-
     try {
-      const isImage = /\.(png|jpe?g|webp)$/i.test(
-        evidenceDetails.original_filename ?? ""
-      );
-
+      const isImage = /\.(png|jpe?g|webp)$/i.test(evidenceDetails.original_filename ?? "");
       if (!isImage) {
-        const content = await getOriginalEvidenceContent(
-          CASE_ID,
-          selectedEvidenceId
-        );
+        const content = await getOriginalEvidenceContent(CASE_ID, selectedEvidenceId);
         setOriginalFileContent(content);
       }
     } catch (err) {
@@ -402,10 +420,7 @@ function App() {
     setTimelineSearch(transfer.filename);
     setTimelineTypeFilter("all");
     setUsbOnly(false);
-
-    document
-      .getElementById("case-event-timeline")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActivePanel("timeline");
   };
 
   const handleOpenEvidenceFromFiles = (id: number) => {
@@ -427,13 +442,10 @@ function App() {
       .join(" ")
       .toLowerCase();
 
-    const matchesSearch = searchableText.includes(
-      timelineSearch.trim().toLowerCase()
-    );
+    const matchesSearch = searchableText.includes(timelineSearch.trim().toLowerCase());
     const matchesType =
       timelineTypeFilter === "all" || event.event_type === timelineTypeFilter;
-    const matchesUsb =
-      !usbOnly || /usb|removable|flash drive/i.test(searchableText);
+    const matchesUsb = !usbOnly || /usb|removable|flash drive/i.test(searchableText);
 
     return matchesSearch && matchesType && matchesUsb;
   });
@@ -445,7 +457,6 @@ function App() {
   const groupedTransferFinding = analysis?.findings.find(
     (finding) => finding.rule === "multiple_usb_writes"
   );
-
   const possibleTransfers = groupedTransferFinding?.transfers ?? [];
 
   const originalImageUrl =
@@ -454,11 +465,16 @@ function App() {
       : "";
 
   /* =========================================================
-     EARLY RETURNS (loading / error / no data)
+     EARLY RETURNS
   ========================================================= */
 
   if (loading) {
-    return <div className="loading-screen">Loading CaseLens...</div>;
+    return (
+      <div className="app-loading">
+        <div className="app-loading-spinner" />
+        <p>Loading CaseLens…</p>
+      </div>
+    );
   }
 
   if (error) {
@@ -474,96 +490,272 @@ function App() {
   ========================================================= */
 
   return (
-    <div className="app">
-      {/* ── HEADER ── */}
-      <header className="header">
-        <div>
-          <h1>CaseLens</h1>
-          <p>Digital Investigation Platform</p>
-        </div>
+    <div className="app app-shell">
 
-        <div className="case-info">
-          <span>CASE</span>
-          <strong>#{summary.case_id}</strong>
-        </div>
-      </header>
-
-      {/* ── DASHBOARD ── */}
-      <main className="dashboard">
-        {/* Stats row */}
-        <CaseSummaryPanel summary={summary} />
-
-        {/* Graph + node details */}
-        <InvestigationDetailsPanel
-          graph={graph}
-          selectedNode={selectedNode}
-          nodeDetails={nodeDetails}
-          detailsLoading={detailsLoading}
-          detailsError={detailsError}
-          selectedEvidenceId={selectedEvidenceId}
-          onNodeSelect={setSelectedNode}
-          onSelectEvidence={setSelectedEvidenceId}
-        />
-
-        {/* Key entities */}
-        <KeyEntitiesPanel summary={summary} />
-
-        {/* Investigation findings */}
-        <FindingsPanel
-          possibleTransfers={possibleTransfers}
-          analysisLoading={analysisLoading}
-          analysisError={analysisError}
-          onViewTimeline={handleViewTimeline}
-          onSelectEvidence={setSelectedEvidenceId}
-        />
-
-        {/* Evidence correlation */}
-        <CorrelationPanel
-          possibleTransfers={possibleTransfers}
-          timelineEvents={timelineEvents}
-          analysisLoading={analysisLoading}
-          analysisError={analysisError}
-          onSelectEvidence={setSelectedEvidenceId}
-        />
-
-        {/* Original files launcher */}
-        <section className="panel original-files-launcher">
-          <div className="panel-header">
-            <div>
-              <h2>Original Evidence Files</h2>
-              <p>Browse and inspect the original files collected for this case.</p>
-            </div>
-            <button
-              type="button"
-              className="finding-timeline-button"
-              onClick={() => setOriginalFilesPanelOpen(true)}
-            >
-              View all files ({caseFiles.length}) →
-            </button>
+      {/* ── SIDEBAR ── */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <span className="sidebar-brand-icon">⬡</span>
+          <div>
+            <div className="sidebar-brand-name">CaseLens</div>
+            <div className="sidebar-brand-sub">Digital Investigation</div>
           </div>
-        </section>
+        </div>
 
-        {/* Event timeline */}
-        <TimelinePanel
-          timelineEvents={timelineEvents}
-          filteredTimelineEvents={filteredTimelineEvents}
-          timelineEventTypes={timelineEventTypes}
-          timelineLoading={timelineLoading}
-          timelineError={timelineError}
-          timelineSearch={timelineSearch}
-          timelineTypeFilter={timelineTypeFilter}
-          usbOnly={usbOnly}
-          activeFinding={activeFinding}
-          onSearchChange={setTimelineSearch}
-          onTypeFilterChange={setTimelineTypeFilter}
-          onUsbOnlyChange={setUsbOnly}
-          onClearFilters={() => {
-            setTimelineSearch("");
-            setTimelineTypeFilter("all");
-            setUsbOnly(false);
-          }}
-          onSelectEvidence={setSelectedEvidenceId}
-        />
+        <div className="sidebar-case-badge">
+          <span className="sidebar-case-label">CASE</span>
+          <span className="sidebar-case-id">#{summary.case_id}</span>
+        </div>
+
+        <nav className="sidebar-nav" aria-label="Dashboard navigation">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`sidebar-nav-item ${activePanel === item.id ? "active" : ""}`}
+              onClick={() => setActivePanel(item.id)}
+              aria-current={activePanel === item.id ? "page" : undefined}
+            >
+              <span className="sidebar-nav-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="sidebar-nav-text">
+                <span className="sidebar-nav-label">{item.label}</span>
+                <span className="sidebar-nav-desc">{item.description}</span>
+              </span>
+              {item.id === "findings" && possibleTransfers.length > 0 && (
+                <span className="sidebar-badge">{possibleTransfers.length}</span>
+              )}
+              {item.id === "timeline" && (
+                <span className="sidebar-badge sidebar-badge-neutral">
+                  {timelineEvents.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="sidebar-stat">
+            <span>{summary.evidence_count}</span>
+            <label>Evidence</label>
+          </div>
+          <div className="sidebar-stat">
+            <span>{summary.event_count}</span>
+            <label>Events</label>
+          </div>
+          <div className="sidebar-stat">
+            <span>{summary.entity_count}</span>
+            <label>Entities</label>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── MAIN PANEL AREA ── */}
+      <main className="panel-area">
+
+        {/* ── PANEL: OVERVIEW ── */}
+        {activePanel === "overview" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Overview</h1>
+                <p className="panel-view-sub">Case summary and statistics</p>
+              </div>
+            </div>
+
+            <CaseSummaryPanel summary={summary} />
+
+            {/* Quick-access tiles */}
+            <div className="quick-access-grid">
+              {NAV_ITEMS.filter((n) => n.id !== "overview").map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="quick-access-tile"
+                  onClick={() => setActivePanel(item.id)}
+                >
+                  <span className="quick-tile-icon">{item.icon}</span>
+                  <span className="quick-tile-label">{item.label}</span>
+                  <span className="quick-tile-desc">{item.description}</span>
+                  <span className="quick-tile-arrow">→</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── PANEL: GRAPH ── */}
+        {activePanel === "graph" && (
+          <div className="panel-view panel-view-fullheight">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Investigation Graph</h1>
+                <p className="panel-view-sub">
+                  {graph.node_count} nodes · {graph.edge_count} edges
+                </p>
+              </div>
+            </div>
+            <InvestigationDetailsPanel
+              graph={graph}
+              selectedNode={selectedNode}
+              nodeDetails={nodeDetails}
+              detailsLoading={detailsLoading}
+              detailsError={detailsError}
+              selectedEvidenceId={selectedEvidenceId}
+              onNodeSelect={setSelectedNode}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+          </div>
+        )}
+
+        {/* ── PANEL: ENTITIES ── */}
+        {activePanel === "entities" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Key Entities</h1>
+                <p className="panel-view-sub">{summary.entity_count} entities detected across all evidence</p>
+              </div>
+            </div>
+            <KeyEntitiesPanel summary={summary} />
+          </div>
+        )}
+
+        {/* ── PANEL: FINDINGS ── */}
+        {activePanel === "findings" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Investigation Findings</h1>
+                <p className="panel-view-sub">Potential incidents identified from evidence records</p>
+              </div>
+              {possibleTransfers.length > 0 && (
+                <span className="panel-view-badge">
+                  {possibleTransfers.length} to review
+                </span>
+              )}
+            </div>
+            <FindingsPanel
+              possibleTransfers={possibleTransfers}
+              analysisLoading={analysisLoading}
+              analysisError={analysisError}
+              onViewTimeline={handleViewTimeline}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+          </div>
+        )}
+
+        {/* ── PANEL: CORRELATION ── */}
+        {activePanel === "correlation" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Evidence Correlation</h1>
+                <p className="panel-view-sub">Compare records associated with each suspected transfer</p>
+              </div>
+            </div>
+            <CorrelationPanel
+              possibleTransfers={possibleTransfers}
+              timelineEvents={timelineEvents}
+              analysisLoading={analysisLoading}
+              analysisError={analysisError}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+          </div>
+        )}
+
+        {/* ── PANEL: TIMELINE ── */}
+        {activePanel === "timeline" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Event Timeline</h1>
+                <p className="panel-view-sub">
+                  {filteredTimelineEvents.length} of {timelineEvents.length} events shown
+                </p>
+              </div>
+            </div>
+            <TimelinePanel
+              timelineEvents={timelineEvents}
+              filteredTimelineEvents={filteredTimelineEvents}
+              timelineEventTypes={timelineEventTypes}
+              timelineLoading={timelineLoading}
+              timelineError={timelineError}
+              timelineSearch={timelineSearch}
+              timelineTypeFilter={timelineTypeFilter}
+              usbOnly={usbOnly}
+              activeFinding={activeFinding}
+              onSearchChange={setTimelineSearch}
+              onTypeFilterChange={setTimelineTypeFilter}
+              onUsbOnlyChange={setUsbOnly}
+              onClearFilters={() => {
+                setTimelineSearch("");
+                setTimelineTypeFilter("all");
+                setUsbOnly(false);
+              }}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+          </div>
+        )}
+
+        {/* ── PANEL: FILES ── */}
+        {activePanel === "files" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Original Evidence Files</h1>
+                <p className="panel-view-sub">
+                  {caseFiles.length} files collected for this case
+                </p>
+              </div>
+              <button
+                type="button"
+                className="panel-view-action"
+                onClick={() => setOriginalFilesPanelOpen(true)}
+              >
+                Browse all files →
+              </button>
+            </div>
+
+            {/* Inline file list preview */}
+            <div className="files-inline-list">
+              {caseFilesLoading && (
+                <p className="timeline-message">Loading files…</p>
+              )}
+              {caseFilesError && (
+                <p className="timeline-message timeline-error">{caseFilesError}</p>
+              )}
+              {!caseFilesLoading && !caseFilesError &&
+                caseFiles.map((file) => (
+                  <article className="original-files-item" key={file.id}>
+                    <div className="original-files-info">
+                      <strong>{file.original_filename}</strong>
+                      <span>
+                        Evidence #{file.id}
+                        {" · "}
+                        {file.file_type || "Unknown type"}
+                        {" · "}
+                        {file.available_on_disk ? "Available" : "Missing on disk"}
+                      </span>
+                      {file.file_size != null && (
+                        <span>{(file.file_size / 1024).toFixed(1)} KB</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="finding-timeline-button"
+                      disabled={!file.available_on_disk}
+                      onClick={() => setSelectedEvidenceId(file.id)}
+                    >
+                      Open evidence →
+                    </button>
+                  </article>
+                ))}
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ── ORIGINAL FILES MODAL ── */}
