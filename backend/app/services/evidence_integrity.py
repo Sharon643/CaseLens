@@ -4,6 +4,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.models.evidence import Evidence
+from app.models.custody_record import CustodyRecord
 
 
 def calculate_sha256(file_path: Path) -> str:
@@ -115,3 +116,32 @@ class EvidenceIntegrityService:
             **counts,
             "results": results,
         }
+
+    def record_verification(
+    self,
+    case_id: int,
+    evidence_id: int,
+    result: dict,
+    actor: str = "system",
+) -> None:
+        
+
+        action_by_status = {
+            "verified": "integrity_verified",
+            "mismatch": "integrity_mismatch",
+            "missing": "integrity_missing",
+            "unverified": "integrity_unverified",
+        }
+
+        record = CustodyRecord(
+            case_id=case_id,
+            evidence_id=evidence_id,
+            action=action_by_status[result["status"]],
+            actor=actor,
+            details=result["message"],
+            sha256_hash=result.get("calculated_sha256")
+            or result.get("recorded_sha256"),
+        )
+
+        self.db.add(record)
+        self.db.commit()

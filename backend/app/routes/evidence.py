@@ -307,7 +307,7 @@ def verify_evidence_integrity(
     service = EvidenceIntegrityService(db)
 
     try:
-        return service.verify_evidence(
+        result = service.verify_evidence(
             case_id=case_id,
             evidence_id=evidence_id,
         )
@@ -317,6 +317,14 @@ def verify_evidence_integrity(
             detail=str(exc),
         ) from exc
 
+    service.record_verification(
+        case_id=case_id,
+        evidence_id=evidence_id,
+        result=result,
+    )
+
+    return result
+
 @router.post("/verify-integrity")
 def verify_case_integrity(
     case_id: int,
@@ -324,4 +332,13 @@ def verify_case_integrity(
 ):
     service = EvidenceIntegrityService(db)
 
-    return service.verify_case(case_id=case_id)
+    result = service.verify_case(case_id=case_id)
+
+    for item in result["results"]:
+        service.record_verification(
+            case_id=case_id,
+            evidence_id=item["evidence_id"],
+            result=item,
+        )
+
+    return result

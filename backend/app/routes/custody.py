@@ -121,3 +121,44 @@ def list_custody_records(
             for record in records
         ],
     }
+
+@router.get("/history")
+def get_case_custody_history(
+    case_id: int,
+    db: Session = Depends(get_db),
+):
+    case = db.get(Case, case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    records = (
+        db.query(CustodyRecord, Evidence.original_filename)
+        .join(
+            Evidence,
+            CustodyRecord.evidence_id == Evidence.id,
+        )
+        .filter(CustodyRecord.case_id == case_id)
+        .order_by(
+            CustodyRecord.recorded_at.asc(),
+            CustodyRecord.id.asc(),
+        )
+        .all()
+    )
+
+    return {
+        "case_id": case_id,
+        "count": len(records),
+        "records": [
+            {
+                "id": record.id,
+                "evidence_id": record.evidence_id,
+                "filename": filename,
+                "action": record.action,
+                "actor": record.actor,
+                "details": record.details,
+                "sha256_hash": record.sha256_hash,
+                "recorded_at": record.recorded_at,
+            }
+            for record, filename in records
+        ],
+    }
