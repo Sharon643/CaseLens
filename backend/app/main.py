@@ -12,12 +12,14 @@ from app.routes.relationships import router as relationships_router
 from app.routes.graph import router as graph_router
 from app.routes.case_summary import router as case_summary_router
 from app.routes.entity_details import router as entity_details_router
+from app.routes.custody import router as custody_router
 
 from app.models.case import Case
 from app.models.evidence import Evidence
 from app.models.entity import Entity
 from app.models.event import Event
 from app.models.relationship import Relationship
+from app.models.custody_record import CustodyRecord
 
 Base.metadata.create_all(bind=engine)
 
@@ -49,6 +51,7 @@ app.include_router(relationships_router)
 app.include_router(graph_router)
 app.include_router(case_summary_router)
 app.include_router(entity_details_router)
+app.include_router(custody_router)
 
 
 @app.get("/health")

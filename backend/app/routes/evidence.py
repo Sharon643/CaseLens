@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.case import Case
 from app.models.evidence import Evidence
+from app.services.evidence_integrity import EvidenceIntegrityService
 
 
 router = APIRouter(
@@ -296,3 +297,31 @@ def get_original_evidence_image(
         filename=evidence.original_filename,
         content_disposition_type="inline",
     )
+
+@router.post("/{evidence_id}/verify-integrity")
+def verify_evidence_integrity(
+    case_id: int,
+    evidence_id: int,
+    db: Session = Depends(get_db),
+):
+    service = EvidenceIntegrityService(db)
+
+    try:
+        return service.verify_evidence(
+            case_id=case_id,
+            evidence_id=evidence_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+@router.post("/verify-integrity")
+def verify_case_integrity(
+    case_id: int,
+    db: Session = Depends(get_db),
+):
+    service = EvidenceIntegrityService(db)
+
+    return service.verify_case(case_id=case_id)
