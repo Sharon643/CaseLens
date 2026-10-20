@@ -39,6 +39,8 @@ import KeyEntitiesPanel from "./components/panels/KeyEntitiesPanel";
 import FindingsPanel from "./components/panels/FindingsPanel";
 import CorrelationPanel from "./components/panels/CorrelationPanel";
 import TimelinePanel from "./components/panels/TimelinePanel";
+import IntegrityCustodyPanel from "./components/panels/IntegrityCustodyPanel";
+import AnomaliesPanel from "./components/panels/AnomaliesPanel";
 import EvidenceViewer from "./components/EvidenceViewer";
 import OriginalFilesModal from "./components/OriginalFilesModal";
 
@@ -50,8 +52,10 @@ type PanelId =
   | "entities"
   | "findings"
   | "correlation"
+  | "anomalies"
   | "timeline"
-  | "files";
+  | "files"
+  | "integrity-custody";
 
 interface NavItem {
   id: PanelId;
@@ -92,6 +96,12 @@ const NAV_ITEMS: NavItem[] = [
     description: "Evidence cross-reference",
   },
   {
+  id: "anomalies",
+  label: "Anomalies",
+  icon: "🔍︎",
+  description: "Detect and investigate suspicious activity",
+  },
+  {
     id: "timeline",
     label: "Timeline",
     icon: "⏲",
@@ -102,6 +112,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Files",
     icon: "⊟",
     description: "Original evidence files",
+  },
+  {
+  id: "integrity-custody",
+  label: "Integrity & Custody",
+  icon: "🛡",
+  description: "Evidence integrity and custody history",
   },
 ];
 
@@ -665,6 +681,22 @@ function App() {
           </div>
         )}
 
+        {/* ── PANEL: ANOMALIES ── */}
+        {activePanel === "anomalies" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">Anomalies</h1>
+                <p className="panel-view-sub">
+                  Rule-based detection of potentially suspicious activity
+                </p>
+              </div>
+            </div>
+
+            <AnomaliesPanel caseId={CASE_ID} />
+          </div>
+        )}
+
         {/* ── PANEL: TIMELINE ── */}
         {activePanel === "timeline" && (
           <div className="panel-view">
@@ -755,7 +787,23 @@ function App() {
             </div>
           </div>
         )}
+        {/* ── PANEL: INTEGRITY & CUSTODY ── */}
+        {activePanel === "integrity-custody" && (
+          <div className="panel-view">
+            <div className="panel-view-header">
+              <div>
+                <h1 className="panel-view-title">
+                  Integrity &amp; Custody
+                </h1>
+                <p className="panel-view-sub">
+                  Verify evidence hashes and review custody history
+                </p>
+              </div>
+            </div>
 
+            <IntegrityCustodyPanel caseId={CASE_ID} />
+          </div>
+        )}
       </main>
 
       {/* ── ORIGINAL FILES MODAL ── */}

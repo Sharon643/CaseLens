@@ -13,6 +13,10 @@ router = APIRouter(
     prefix="/cases/{case_id}/evidence/{evidence_id}/custody",
     tags=["Chain of Custody"],
 )
+case_custody_router = APIRouter(
+    prefix="/cases/{case_id}/custody",
+    tags=["Chain of Custody"],
+)
 
 
 class CustodyRecordCreate(BaseModel):
@@ -122,7 +126,7 @@ def list_custody_records(
         ],
     }
 
-@router.get("/history")
+@case_custody_router.get("/history")
 def get_case_custody_history(
     case_id: int,
     db: Session = Depends(get_db),
@@ -162,3 +166,4 @@ def get_case_custody_history(
             for record, filename in records
         ],
     }
+

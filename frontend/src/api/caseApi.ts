@@ -329,3 +329,116 @@ export async function getCaseEvidenceFiles(
 
   return response.data;
 }
+/* =========================================================
+   EVIDENCE INTEGRITY
+========================================================= */
+
+export type IntegrityStatus =
+  | "verified"
+  | "mismatch"
+  | "missing"
+  | "unverified";
+
+export interface IntegrityResult {
+  case_id: number;
+  evidence_id: number;
+  filename: string;
+  status: IntegrityStatus;
+  recorded_sha256: string | null;
+  calculated_sha256: string | null;
+  message: string;
+}
+
+export interface CaseIntegrityResponse {
+  case_id: number;
+  total_files: number;
+  verified: number;
+  mismatch: number;
+  missing: number;
+  unverified: number;
+  results: IntegrityResult[];
+}
+
+export async function verifyCaseIntegrity(
+  caseId: number
+): Promise<CaseIntegrityResponse> {
+  const response = await api.post<CaseIntegrityResponse>(
+    `/cases/${caseId}/evidence/verify-integrity`
+  );
+
+  return response.data;
+}
+
+/* =========================================================
+   CHAIN OF CUSTODY
+========================================================= */
+
+export interface CustodyRecord {
+  id: number;
+  evidence_id: number;
+  filename: string;
+  action: string;
+  actor: string;
+  details: string | null;
+  sha256_hash: string | null;
+  recorded_at: string;
+}
+
+export interface CaseCustodyHistoryResponse {
+  case_id: number;
+  count: number;
+  records: CustodyRecord[];
+}
+
+export async function getCaseCustodyHistory(
+  caseId: number
+): Promise<CaseCustodyHistoryResponse> {
+  const response = await api.get<CaseCustodyHistoryResponse>(
+    `/cases/${caseId}/custody/history`
+  );
+
+  return response.data;
+}
+
+/* =========================================================
+   ANOMALY DETECTION
+========================================================= */
+
+export interface AnomalySupportingEvidence {
+  evidence_id: number;
+  filename: string;
+  event_id: number;
+}
+
+export interface AnomalyFinding {
+  rule: string;
+  severity: string;
+  title: string;
+  reason: string;
+  timestamp: string | null;
+  event_id: number;
+  evidence_id: number;
+  filename: string;
+  event_type: string;
+  description: string;
+  supporting_evidence: AnomalySupportingEvidence[];
+}
+
+export interface CaseAnomaliesResponse {
+  case_id: number;
+  events_analyzed: number;
+  finding_count: number;
+  findings: AnomalyFinding[];
+  notice: string;
+}
+
+export async function getCaseAnomalies(
+  caseId: number
+): Promise<CaseAnomaliesResponse> {
+  const response = await api.get<CaseAnomaliesResponse>(
+    `/cases/${caseId}/anomalies`
+  );
+
+  return response.data;
+}
+
