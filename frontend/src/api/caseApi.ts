@@ -6,6 +6,20 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+export interface CaseRecord {
+  id: number;
+  case_number: string;
+  title: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+}
+
+export async function getCases(): Promise<CaseRecord[]> {
+  const response = await api.get<CaseRecord[]>("/cases");
+  return response.data;
+}
+
 /* =========================================================
    CASE SUMMARY
 ========================================================= */

@@ -44,7 +44,15 @@ import AnomaliesPanel from "./components/panels/AnomaliesPanel";
 import EvidenceViewer from "./components/EvidenceViewer";
 import OriginalFilesModal from "./components/OriginalFilesModal";
 
-const CASE_ID = 1;
+
+interface CaseRecord {
+  id: number;
+  case_number: string;
+  title: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+}
 
 type PanelId =
   | "overview"
@@ -131,7 +139,10 @@ function App() {
   /* =========================================================
      CASE STATE
   ========================================================= */
-
+  const [cases, setCases] = useState<CaseRecord[]>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState<number | null>(null);
+  const [casesLoading, setCasesLoading] = useState(true);
+  const [casesError, setCasesError] = useState<string | null>(null);
   const [summary, setSummary] = useState<CaseSummary | null>(null);
   const [graph, setGraph] = useState<CaseGraph | null>(null);
   const [loading, setLoading] = useState(true);
@@ -193,39 +204,102 @@ function App() {
   const [originalFileError, setOriginalFileError] = useState<string | null>(null);
 
   /* =========================================================
-     LOAD CASE (summary + graph)
+     LOAD AVAILABLE CASES
   ========================================================= */
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadCases() {
+      setCasesLoading(true);
+      setCasesError(null);
+
+      try {
+        const response = await api.get<CaseRecord[]>("/cases");
+        const data = response.data;
+        if (cancelled) return;
+
+        setCases(data);
+        setSelectedCaseId((currentId) => {
+          if (currentId !== null && data.some((item) => item.id === currentId)) {
+            return currentId;
+          }
+          return data.length > 0 ? data[0].id : null;
+        });
+
+        if (data.length === 0) setLoading(false);
+      } catch (err) {
+        console.error("Failed to load cases:", err);
+        if (!cancelled) {
+          setCasesError("Unable to load available cases.");
+          setLoading(false);
+        }
+      } finally {
+        if (!cancelled) setCasesLoading(false);
+      }
+    }
+
+    void loadCases();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* =========================================================
+     LOAD SELECTED CASE (summary + graph)
+  ========================================================= */
+
+  useEffect(() => {
+    if (selectedCaseId === null) {
+      setSummary(null);
+      setGraph(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const caseId = selectedCaseId; // narrowed to number here
+
     async function loadCase() {
+      setLoading(true);
+      setError(null);
+      setSummary(null);
+      setGraph(null);
+
       try {
         const [summaryData, graphData] = await Promise.all([
-          getCaseSummary(CASE_ID),
-          getCaseGraph(CASE_ID),
+          getCaseSummary(caseId),
+          getCaseGraph(caseId),
         ]);
+        if (cancelled) return;
         setSummary(summaryData);
         setGraph(graphData);
       } catch (err) {
         console.error("Failed to load case:", err);
-        setError("Unable to connect to CaseLens backend.");
+        if (!cancelled) setError("Unable to load the selected case.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadCase();
-  }, []);
+
+    void loadCase();
+    return () => { cancelled = true; };
+  }, [selectedCaseId]);
 
   /* =========================================================
      LOAD ORIGINAL EVIDENCE FILES
   ========================================================= */
 
   useEffect(() => {
+    if (selectedCaseId === null) {
+      setCaseFiles([]);
+      setCaseFilesLoading(false);
+      return;
+    }
     let cancelled = false;
     async function loadCaseFiles() {
       setCaseFilesLoading(true);
       setCaseFilesError(null);
       try {
-        const response: CaseEvidenceFilesResponse = await getCaseEvidenceFiles(CASE_ID);
+        const response: CaseEvidenceFilesResponse = await getCaseEvidenceFiles(selectedCaseId!);
         if (!cancelled) setCaseFiles(response.files);
       } catch (err) {
         console.error("Failed to load original evidence files:", err);
@@ -236,20 +310,25 @@ function App() {
     }
     void loadCaseFiles();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedCaseId]);
 
   /* =========================================================
      LOAD TIMELINE
   ========================================================= */
 
   useEffect(() => {
+    if (selectedCaseId === null) {
+      setTimelineEvents([]);
+      setTimelineLoading(false);
+      return;
+    }
     let cancelled = false;
     async function loadTimeline() {
       setTimelineLoading(true);
       setTimelineError(null);
       try {
         const response = await api.get<CaseTimelineResponse>(
-          `/evidence/cases/${CASE_ID}/events`
+          `/evidence/cases/${selectedCaseId}/events`
         );
         if (!cancelled) {
           const events = Array.isArray(response.data.events) ? response.data.events : [];
@@ -270,20 +349,25 @@ function App() {
     }
     void loadTimeline();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedCaseId]);
 
   /* =========================================================
      LOAD ANALYSIS
   ========================================================= */
 
   useEffect(() => {
+    if (selectedCaseId === null) {
+      setAnalysis(null);
+      setAnalysisLoading(false);
+      return;
+    }
     let cancelled = false;
     async function loadAnalysis() {
       setAnalysisLoading(true);
       setAnalysisError(null);
       try {
         const response = await api.get<CaseAnalysisResponse>(
-          `/evidence/cases/${CASE_ID}/analysis`
+          `/evidence/cases/${selectedCaseId}/analysis`
         );
         if (!cancelled) setAnalysis(response.data);
       } catch (err) {
@@ -295,18 +379,19 @@ function App() {
     }
     void loadAnalysis();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedCaseId]);
 
   /* =========================================================
      LOAD SELECTED GRAPH NODE DETAILS
   ========================================================= */
 
   useEffect(() => {
-    if (!selectedNode) {
+    if (selectedCaseId === null || !selectedNode) {
       setNodeDetails(null);
       setDetailsError(null);
       return;
     }
+    const caseId = selectedCaseId;
     const nodeId = selectedNode.id;
     const separatorIndex = nodeId.indexOf(":");
     if (separatorIndex === -1) {
@@ -316,13 +401,14 @@ function App() {
     }
     const nodeType = nodeId.substring(0, separatorIndex);
     const nodeValue = nodeId.substring(separatorIndex + 1);
+    
 
     async function loadNodeDetails() {
       setDetailsLoading(true);
       setDetailsError(null);
       setNodeDetails(null);
       try {
-        const details = await getGraphNodeDetails(CASE_ID, nodeType, nodeValue);
+        const details = await getGraphNodeDetails(caseId, nodeType, nodeValue);
         setNodeDetails(details);
       } catch (err) {
         console.error("Failed to load graph node details:", err);
@@ -332,20 +418,21 @@ function App() {
       }
     }
     loadNodeDetails();
-  }, [selectedNode]);
+  }, [selectedNode, selectedCaseId]);
 
   /* =========================================================
      LOAD SELECTED EVIDENCE
   ========================================================= */
 
   useEffect(() => {
-    if (selectedEvidenceId === null) {
+    if (selectedCaseId === null || selectedEvidenceId === null) {
       setEvidenceDetails(null);
       setEvidenceError(null);
       setEvidenceEvents([]);
       setEvidenceEventsError(null);
       return;
     }
+    const caseId = selectedCaseId;
     const evidenceId = selectedEvidenceId;
     let cancelled = false;
 
@@ -354,7 +441,7 @@ function App() {
       setEvidenceError(null);
       setEvidenceDetails(null);
       try {
-        const details = await getEvidenceDetails(CASE_ID, evidenceId);
+        const details = await getEvidenceDetails(caseId, evidenceId);
         if (!cancelled) setEvidenceDetails(details);
       } catch (err) {
         console.error("Failed to load evidence:", err);
@@ -388,7 +475,7 @@ function App() {
     void loadEvidence();
     void loadEvidenceEvents();
     return () => { cancelled = true; };
-  }, [selectedEvidenceId]);
+  }, [selectedEvidenceId, selectedCaseId]);
 
   /* =========================================================
      HANDLERS
@@ -412,7 +499,7 @@ function App() {
   };
 
   const openOriginalFile = async () => {
-    if (selectedEvidenceId === null || !evidenceDetails) return;
+    if (selectedCaseId === null || selectedEvidenceId === null || !evidenceDetails) return;
     setOriginalFileOpen(true);
     setOriginalFileLoading(true);
     setOriginalFileError(null);
@@ -420,7 +507,7 @@ function App() {
     try {
       const isImage = /\.(png|jpe?g|webp)$/i.test(evidenceDetails.original_filename ?? "");
       if (!isImage) {
-        const content = await getOriginalEvidenceContent(CASE_ID, selectedEvidenceId);
+        const content = await getOriginalEvidenceContent(selectedCaseId!, selectedEvidenceId);
         setOriginalFileContent(content);
       }
     } catch (err) {
@@ -476,21 +563,29 @@ function App() {
   const possibleTransfers = groupedTransferFinding?.transfers ?? [];
 
   const originalImageUrl =
-    selectedEvidenceId !== null && evidenceDetails
-      ? getOriginalEvidenceImageUrl(CASE_ID, selectedEvidenceId)
+    selectedCaseId !== null && selectedEvidenceId !== null && evidenceDetails
+      ? getOriginalEvidenceImageUrl(selectedCaseId, selectedEvidenceId)
       : "";
 
   /* =========================================================
      EARLY RETURNS
   ========================================================= */
 
-  if (loading) {
+  if (casesLoading || (selectedCaseId !== null && loading)) {
     return (
       <div className="app-loading">
         <div className="app-loading-spinner" />
         <p>Loading CaseLens…</p>
       </div>
     );
+  }
+
+  if (casesError) {
+    return <div className="error-screen">{casesError}</div>;
+  }
+
+  if (selectedCaseId === null || cases.length === 0) {
+    return <div className="error-screen">No cases found. Create a case before starting an investigation.</div>;
   }
 
   if (error) {
@@ -519,8 +614,33 @@ function App() {
         </div>
 
         <div className="sidebar-case-badge">
-          <span className="sidebar-case-label">CASE</span>
-          <span className="sidebar-case-id">#{summary.case_id}</span>
+          <label className="sidebar-case-label" htmlFor="case-selector">ACTIVE CASE</label>
+          <select
+            id="case-selector"
+            className="sidebar-case-select"
+            value={selectedCaseId}
+            onChange={(event) => {
+              const nextCaseId = Number(event.target.value);
+              setSelectedCaseId(nextCaseId);
+              setSelectedNode(null);
+              setSelectedEvidenceId(null);
+              setActiveFinding(null);
+              setOriginalFilesPanelOpen(false);
+              setOriginalFileOpen(false);
+              setOriginalFileContent("");
+              setTimelineSearch("");
+              setTimelineTypeFilter("all");
+              setUsbOnly(false);
+              setFileSearch("");
+            }}
+            aria-label="Select active investigation case"
+          >
+            {cases.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.case_number} — {item.title}
+              </option>
+            ))}
+          </select>
         </div>
 
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
@@ -693,7 +813,9 @@ function App() {
               </div>
             </div>
 
-            <AnomaliesPanel caseId={CASE_ID} />
+            {selectedCaseId !== null && (
+            <AnomaliesPanel caseId={selectedCaseId} />
+          )}
           </div>
         )}
 
@@ -801,7 +923,9 @@ function App() {
               </div>
             </div>
 
-            <IntegrityCustodyPanel caseId={CASE_ID} />
+            {selectedCaseId !== null && (
+            <IntegrityCustodyPanel caseId={selectedCaseId} />
+          )}
           </div>
         )}
       </main>

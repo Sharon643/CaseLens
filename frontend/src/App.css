@@ -3459,3 +3459,155 @@ body,
     grid-template-columns: 1fr;
   }
 }
+.anomalies-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.anomalies-search input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  color: inherit;
+  background: var(--panel-bg, #17191f);
+  border: 1px solid var(--border-color, #30343b);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.anomalies-search input:focus,
+.anomalies-filters select:focus {
+  outline: 2px solid var(--accent-color, #6478ff);
+  outline-offset: 2px;
+}
+/* Active case selector */
+.sidebar-case-badge select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  padding: 10px 32px 10px 12px;
+
+  color: #f3f4f6;
+  background-color: #1b1f2a;
+  border: 1px solid #343a49;
+  border-radius: 8px;
+
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+
+  cursor: pointer;
+  outline: none;
+}
+
+.sidebar-case-badge select:hover {
+  border-color: #6478ff;
+}
+
+.sidebar-case-badge select:focus-visible {
+  border-color: #8190ff;
+  box-shadow: 0 0 0 3px rgb(100 120 255 / 20%);
+}
+
+.sidebar-case-badge select option {
+  color: #f3f4f6;
+  background-color: #1b1f2a;
+}
+
+.sidebar-case-badge select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+/* Case management */
+.sidebar-case-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 9px;
+}
+.case-add-button,
+.case-delete-button,
+.case-primary-button,
+.case-secondary-button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, opacity 150ms ease;
+}
+.case-add-button {
+  color: #f4f5ff;
+  background: #303a68;
+  border-color: #47558c;
+  text-align: left;
+}
+.case-add-button:hover { background: #3b477d; }
+.case-delete-button {
+  color: #ffb4b4;
+  background: #352126;
+  border-color: #60333c;
+}
+.case-delete-button:hover { background: #4a272f; }
+.case-add-button:disabled,
+.case-delete-button:disabled,
+.case-primary-button:disabled,
+.case-secondary-button:disabled { opacity: .55; cursor: not-allowed; }
+.case-sidebar-error {
+  margin: 8px 0 0;
+  color: #ffb4b4;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.case-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(5 8 18 / 72%);
+  backdrop-filter: blur(5px);
+}
+.case-modal,
+.case-empty-card {
+  width: min(100%, 480px);
+  padding: 24px;
+  color: #f3f4f6;
+  background: #171b26;
+  border: 1px solid #343b4d;
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 40%);
+}
+.case-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.case-modal-header h2,
+.case-empty-card h1 { margin: 0; font-size: 20px; font-weight: 700; }
+.case-modal-header p,
+.case-empty-card > p { margin: 7px 0 0; color: #9ca6ba; font-size: 13px; line-height: 1.55; }
+.case-modal-close {
+  width: 32px; height: 32px; border: 1px solid #3b4355; border-radius: 8px;
+  color: #d9deea; background: #202635; font-size: 22px; cursor: pointer;
+}
+.case-management-form { display: grid; gap: 16px; }
+.case-management-form label { display: grid; gap: 7px; color: #cbd2e1; font-size: 12px; font-weight: 600; }
+.case-management-form input,
+.case-management-form textarea {
+  width: 100%; box-sizing: border-box; padding: 11px 12px; color: #f3f4f6;
+  background: #10141e; border: 1px solid #353d50; border-radius: 8px;
+  font: inherit; font-size: 13px; outline: none; resize: vertical;
+}
+.case-management-form input:focus,
+.case-management-form textarea:focus { border-color: #8190ff; box-shadow: 0 0 0 3px rgb(100 120 255 / 15%); }
+.case-form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 4px; }
+.case-primary-button { color: white; background: #5865d8; border-color: #6b77e5; }
+.case-primary-button:hover { background: #6875e7; }
+.case-secondary-button { color: #d9deea; background: #242a38; border-color: #3b4355; }
+.case-form-error { margin: 0 0 14px; color: #ffb4b4; font-size: 12px; line-height: 1.5; }
+.case-empty-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box; background: #0e1119; }
+.case-empty-card { width: min(100%, 500px); }
+.case-empty-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 18px; border-radius: 12px; color: #dce0ff; background: #303a68; font-size: 26px; }
+.case-empty-card .case-management-form { margin-top: 22px; }

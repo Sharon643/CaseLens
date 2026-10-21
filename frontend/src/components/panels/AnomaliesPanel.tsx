@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import {
   getCaseAnomalies,
@@ -9,6 +8,8 @@ import {
 interface AnomaliesPanelProps {
   caseId: number;
 }
+
+type SortOrder = "newest" | "oldest" | "severity";
 
 const formatTimestamp = (timestamp: string | null) => {
   if (!timestamp) return "Unknown time";
@@ -28,6 +29,8 @@ export default function AnomaliesPanel({
   const [error, setError] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [ruleFilter, setRuleFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [expandedFinding, setExpandedFinding] = useState<number | null>(null);
 
   useEffect(() => {
@@ -42,7 +45,9 @@ export default function AnomaliesPanel({
         if (!cancelled) setData(result);
       } catch {
         if (!cancelled) {
-          setError("Could not load anomaly findings. Check that the backend is running.");
+          setError(
+            "Could not load anomaly findings. Check that the backend is running.",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -63,18 +68,67 @@ export default function AnomaliesPanel({
     [findings],
   );
 
-  const filteredFindings = useMemo(
-    () =>
-      findings.filter((finding) => {
+  const filteredFindings = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    const severityRank: Record<string, number> = {
+      high: 3,
+      medium: 2,
+      low: 1,
+    };
+
+    return findings
+      .filter((finding) => {
         const matchesSeverity =
-          severityFilter === "all" || finding.severity === severityFilter;
+          severityFilter === "all" ||
+          finding.severity === severityFilter;
+
         const matchesRule =
           ruleFilter === "all" || finding.rule === ruleFilter;
 
-        return matchesSeverity && matchesRule;
-      }),
-    [findings, severityFilter, ruleFilter],
-  );
+        const searchableText = [
+          finding.title,
+          finding.reason,
+          finding.rule,
+          finding.filename,
+          finding.description ?? "",
+          ...((finding.supporting_evidence ?? []).map(
+            (source) => source.filename,
+          )),
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        const matchesSearch =
+          !query || searchableText.includes(query);
+
+        return matchesSeverity && matchesRule && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (sortOrder === "severity") {
+          const severityDifference =
+            (severityRank[b.severity] ?? 0) -
+            (severityRank[a.severity] ?? 0);
+
+          if (severityDifference !== 0) {
+            return severityDifference;
+          }
+        }
+
+        const timeA = a.timestamp
+          ? new Date(a.timestamp).getTime()
+          : 0;
+        const timeB = b.timestamp
+          ? new Date(b.timestamp).getTime()
+          : 0;
+
+        if (sortOrder === "oldest") {
+          return timeA - timeB;
+        }
+
+        return timeB - timeA;
+      });
+  }, [findings, severityFilter, ruleFilter, searchQuery, sortOrder]);
 
   const highCount = findings.filter(
     (finding) => finding.severity === "high",
@@ -122,6 +176,17 @@ export default function AnomaliesPanel({
       </div>
 
       <div className="anomalies-filters">
+        <label className="anomalies-search">
+          Search findings
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search file, rule, or activity..."
+            aria-label="Search anomaly findings"
+          />
+        </label>
+
         <label>
           Severity
           <select
@@ -150,7 +215,21 @@ export default function AnomaliesPanel({
           </select>
         </label>
 
-        <span className="anomalies-result-count">
+        <label>
+          Sort by
+          <select
+            value={sortOrder}
+            onChange={(event) =>
+              setSortOrder(event.target.value as SortOrder)
+            }
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="severity">Highest severity</option>
+          </select>
+        </label>
+
+        <span className="anomalies-result-count" aria-live="polite">
           Showing {filteredFindings.length} of {data.finding_count}
         </span>
       </div>
@@ -211,10 +290,14 @@ export default function AnomaliesPanel({
                   className="anomaly-evidence-toggle"
                   aria-expanded={isExpanded}
                   onClick={() =>
-                    setExpandedFinding(isExpanded ? null : finding.event_id)
+                    setExpandedFinding(
+                      isExpanded ? null : finding.event_id,
+                    )
                   }
                 >
-                  {isExpanded ? "Hide supporting evidence" : "View supporting evidence"}
+                  {isExpanded
+                    ? "Hide supporting evidence"
+                    : "View supporting evidence"}
                   <span>{supportingEvidence.length}</span>
                 </button>
 
@@ -242,9 +325,7 @@ export default function AnomaliesPanel({
         </div>
       )}
 
-      <p className="anomalies-notice">
-        {data.notice}
-      </p>
+      <p className="anomalies-notice">{data.notice}</p>
     </section>
   );
 }
