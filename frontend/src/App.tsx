@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import {
   getCaseSummary,
@@ -143,6 +143,15 @@ function App() {
   const [selectedCaseId, setSelectedCaseId] = useState<number | null>(null);
   const [casesLoading, setCasesLoading] = useState(true);
   const [casesError, setCasesError] = useState<string | null>(null);
+  const [caseModalOpen, setCaseModalOpen] = useState(false);
+  const [caseNumberInput, setCaseNumberInput] = useState("");
+  const [caseTitleInput, setCaseTitleInput] = useState("");
+  const [caseDescriptionInput, setCaseDescriptionInput] = useState("");
+  const [caseActionLoading, setCaseActionLoading] = useState(false);
+  const [caseActionError, setCaseActionError] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [summary, setSummary] = useState<CaseSummary | null>(null);
   const [graph, setGraph] = useState<CaseGraph | null>(null);
   const [loading, setLoading] = useState(true);
@@ -531,6 +540,108 @@ function App() {
     setSelectedEvidenceId(id);
   };
 
+  const resetCaseForm = () => {
+    setCaseNumberInput("");
+    setCaseTitleInput("");
+    setCaseDescriptionInput("");
+    setCaseActionError(null);
+  };
+
+  const handleCreateCase = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const caseNumber = caseNumberInput.trim();
+    const title = caseTitleInput.trim();
+    if (!caseNumber || !title) {
+      setCaseActionError("Case number and title are required.");
+      return;
+    }
+
+    setCaseActionLoading(true);
+    setCaseActionError(null);
+    try {
+      const response = await api.post<CaseRecord>("/cases", {
+        case_number: caseNumber,
+        title,
+        description: caseDescriptionInput.trim() || null,
+      });
+      const createdCase = response.data;
+      setCases((current) => [createdCase, ...current]);
+      setSelectedCaseId(createdCase.id);
+      setSelectedNode(null);
+      setSelectedEvidenceId(null);
+      setActiveFinding(null);
+      setActivePanel("overview");
+      setCaseModalOpen(false);
+      resetCaseForm();
+      setError(null);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setCaseActionError(
+        typeof detail === "string" ? detail : "Could not create the case. Check the case number and try again."
+      );
+    } finally {
+      setCaseActionLoading(false);
+    }
+  };
+
+  const handleDeleteCase = async () => {
+    if (selectedCaseId === null) return;
+    const activeCase = cases.find((item) => item.id === selectedCaseId);
+    if (!activeCase) return;
+    const confirmed = window.confirm(
+      `Delete ${activeCase.case_number} — ${activeCase.title}? This will remove the case and its stored evidence. This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setCaseActionLoading(true);
+    setCaseActionError(null);
+    try {
+      await api.delete(`/cases/${selectedCaseId}`);
+      const remainingCases = cases.filter((item) => item.id !== selectedCaseId);
+      setCases(remainingCases);
+      setSelectedCaseId(remainingCases.length ? remainingCases[0].id : null);
+      setSelectedNode(null);
+      setSelectedEvidenceId(null);
+      setActiveFinding(null);
+      setOriginalFilesPanelOpen(false);
+      setOriginalFileOpen(false);
+      setOriginalFileContent("");
+      setCaseFiles([]);
+      setSummary(null);
+      setGraph(null);
+      setError(null);
+      if (remainingCases.length === 0) setLoading(false);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setCaseActionError(typeof detail === "string" ? detail : "Could not delete the case.");
+    } finally {
+      setCaseActionLoading(false);
+    }
+  };
+
+  const handleUploadEvidence = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || selectedCaseId === null) return;
+
+    setUploadLoading(true);
+    setUploadMessage(null);
+    setUploadError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await api.post(`/cases/${selectedCaseId}/evidence`, formData);
+      const refreshedFiles = await getCaseEvidenceFiles(selectedCaseId);
+      setCaseFiles(refreshedFiles.files);
+      setUploadMessage(`Uploaded ${file.name}. The evidence file is now listed in this case.`);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setUploadError(typeof detail === "string" ? detail : "Upload failed. Check the file and try again.");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   /* =========================================================
      DERIVED VALUES
   ========================================================= */
@@ -585,7 +696,35 @@ function App() {
   }
 
   if (selectedCaseId === null || cases.length === 0) {
-    return <div className="error-screen">No cases found. Create a case before starting an investigation.</div>;
+    return (
+      <div className="case-empty-screen">
+        <section className="case-empty-card">
+          <div className="case-empty-icon" aria-hidden="true">⬡</div>
+          <h1>Welcome to CaseLens</h1>
+          <p>No investigation cases exist yet. Create your first case to begin.</p>
+          {caseActionError && <p className="case-form-error" role="alert">{caseActionError}</p>}
+          <form className="case-management-form" onSubmit={handleCreateCase}>
+            <label>
+              Case number *
+              <input value={caseNumberInput} onChange={(event) => setCaseNumberInput(event.target.value)} placeholder="CASE-002" required maxLength={80} />
+            </label>
+            <label>
+              Case title *
+              <input value={caseTitleInput} onChange={(event) => setCaseTitleInput(event.target.value)} placeholder="Investigation title" required maxLength={200} />
+            </label>
+            <label>
+              Description
+              <textarea value={caseDescriptionInput} onChange={(event) => setCaseDescriptionInput(event.target.value)} placeholder="Brief description (optional)" rows={3} />
+            </label>
+            <div className="case-form-actions">
+              <button className="case-primary-button" type="submit" disabled={caseActionLoading}>
+                {caseActionLoading ? "Creating…" : "Create case"}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    );
   }
 
   if (error) {
@@ -641,6 +780,15 @@ function App() {
               </option>
             ))}
           </select>
+          <div className="case-sidebar-actions">
+            <button type="button" className="case-sidebar-button" onClick={() => { resetCaseForm(); setCaseModalOpen(true); }}>
+              + New case
+            </button>
+            <button type="button" className="case-sidebar-button case-sidebar-button-danger" onClick={handleDeleteCase} disabled={caseActionLoading}>
+              Delete active
+            </button>
+          </div>
+          {caseActionError && <p className="case-sidebar-error" role="alert">{caseActionError}</p>}
         </div>
 
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
@@ -686,6 +834,39 @@ function App() {
           </div>
         </div>
       </aside>
+
+      {caseModalOpen && (
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !caseActionLoading) setCaseModalOpen(false); }}>
+          <section className="case-modal" role="dialog" aria-modal="true" aria-labelledby="create-case-title">
+            <div className="case-modal-header">
+              <div>
+                <h2 id="create-case-title">Create investigation case</h2>
+                <p>Set up a new case before adding evidence.</p>
+              </div>
+              <button type="button" className="case-modal-close" aria-label="Close dialog" onClick={() => setCaseModalOpen(false)} disabled={caseActionLoading}>×</button>
+            </div>
+            {caseActionError && <p className="case-form-error" role="alert">{caseActionError}</p>}
+            <form className="case-management-form" onSubmit={handleCreateCase}>
+              <label>
+                Case number *
+                <input value={caseNumberInput} onChange={(event) => setCaseNumberInput(event.target.value)} placeholder="CASE-002" required maxLength={80} />
+              </label>
+              <label>
+                Case title *
+                <input value={caseTitleInput} onChange={(event) => setCaseTitleInput(event.target.value)} placeholder="Investigation title" required maxLength={200} />
+              </label>
+              <label>
+                Description
+                <textarea value={caseDescriptionInput} onChange={(event) => setCaseDescriptionInput(event.target.value)} placeholder="Brief description (optional)" rows={3} />
+              </label>
+              <div className="case-form-actions">
+                <button type="button" className="case-secondary-button" onClick={() => { setCaseModalOpen(false); resetCaseForm(); }} disabled={caseActionLoading}>Cancel</button>
+                <button type="submit" className="case-primary-button" disabled={caseActionLoading}>{caseActionLoading ? "Creating…" : "Create case"}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {/* ── MAIN PANEL AREA ── */}
       <main className="panel-area">
@@ -871,6 +1052,20 @@ function App() {
                 Browse all files →
               </button>
             </div>
+
+            <section className="evidence-upload-card">
+              <div>
+                <h2>Add evidence</h2>
+                <p>Select a file to preserve it in the active case and calculate its hash.</p>
+              </div>
+              <label className="evidence-upload-button">
+                {uploadLoading ? "Uploading…" : "Choose file"}
+                <input type="file" onChange={handleUploadEvidence} disabled={uploadLoading} />
+              </label>
+              {uploadMessage && <p className="evidence-upload-success" role="status">{uploadMessage}</p>}
+              {uploadError && <p className="case-form-error" role="alert">{uploadError}</p>}
+              <p className="evidence-upload-note">Uploading stores the original file and its hash. Extraction and analysis may require a separate processing step.</p>
+            </section>
 
             {/* Inline file list preview */}
             <div className="files-inline-list">

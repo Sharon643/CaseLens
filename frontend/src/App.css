@@ -3611,3 +3611,120 @@ body,
 .case-empty-card { width: min(100%, 500px); }
 .case-empty-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 18px; border-radius: 12px; color: #dce0ff; background: #303a68; font-size: 26px; }
 .case-empty-card .case-management-form { margin-top: 22px; }
+
+/* Case management and evidence upload */
+.case-sidebar-actions { display: flex; gap: 6px; width: 100%; margin-top: 10px; }
+.case-sidebar-button { flex: 1; min-width: 0; padding: 7px 6px; border: 1px solid #2b3b52; border-radius: 7px; background: #142033; color: #a9c9f3; font-size: 11px; cursor: pointer; }
+.case-sidebar-button:hover { background: #1b2c45; }
+.case-sidebar-button-danger { border-color: #4a2b35; background: #21161c; color: #f0a6b0; }
+.case-sidebar-button-danger:hover { background: #321b24; }
+.case-sidebar-button:disabled { opacity: .55; cursor: not-allowed; }
+.case-sidebar-error { margin: 8px 0 0; color: #ffb4b4; font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+.case-modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgb(5 8 18 / 72%); backdrop-filter: blur(5px); }
+.case-modal, .case-empty-card { width: min(100%, 480px); padding: 24px; color: #f3f4f6; background: #171b26; border: 1px solid #343b4d; border-radius: 16px; box-shadow: 0 24px 80px rgb(0 0 0 / 40%); }
+.case-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.case-modal-header h2, .case-empty-card h1 { margin: 0; font-size: 20px; font-weight: 700; }
+.case-modal-header p, .case-empty-card > p { margin: 7px 0 0; color: #9ca6ba; font-size: 13px; line-height: 1.55; }
+.case-modal-close { width: 32px; height: 32px; border: 1px solid #3b4355; border-radius: 8px; color: #d9deea; background: #202635; font-size: 22px; cursor: pointer; }
+.case-management-form { display: grid; gap: 16px; }
+.case-management-form label { display: grid; gap: 7px; color: #cbd2e1; font-size: 12px; font-weight: 600; }
+.case-management-form input, .case-management-form textarea { width: 100%; box-sizing: border-box; padding: 11px 12px; color: #f3f4f6; background: #10141e; border: 1px solid #353d50; border-radius: 8px; font: inherit; font-size: 13px; outline: none; resize: vertical; }
+.case-management-form input:focus, .case-management-form textarea:focus { border-color: #8190ff; box-shadow: 0 0 0 3px rgb(100 120 255 / 15%); }
+.case-form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 4px; }
+.case-primary-button, .case-secondary-button { padding: 9px 14px; border: 1px solid transparent; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.case-primary-button { color: white; background: #5865d8; border-color: #6b77e5; }
+.case-primary-button:hover { background: #6875e7; }
+.case-secondary-button { color: #d9deea; background: #242a38; border-color: #3b4355; }
+.case-form-error { margin: 0 0 14px; color: #ffb4b4; font-size: 12px; line-height: 1.5; }
+.case-empty-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box; background: #0e1119; }
+.case-empty-card { width: min(100%, 500px); }
+.case-empty-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 18px; border-radius: 12px; color: #dce0ff; background: #303a68; font-size: 26px; }
+.case-empty-card .case-management-form { margin-top: 22px; }
+.evidence-upload-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; margin-bottom: 18px; border: 1px solid #27364a; border-radius: 10px; background: #101720; }
+.evidence-upload-card h2 { margin: 0 0 5px; font-size: 14px; }
+.evidence-upload-card p { margin: 0; color: #8998aa; font-size: 12px; line-height: 1.5; }
+.evidence-upload-button { position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 9px 14px; border: 1px solid #35527a; border-radius: 8px; color: #b9d6fb; background: #172944; font-size: 12px; cursor: pointer; }
+.evidence-upload-button:hover { background: #203858; }
+.evidence-upload-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.evidence-upload-button input:disabled { cursor: wait; }
+.evidence-upload-success { flex-basis: 100%; color: #9ee0b1 !important; }
+.evidence-upload-note { flex-basis: 100%; font-size: 11px !important; }
+@media (max-width: 700px) { .case-sidebar-actions { flex-direction: column; } .evidence-upload-card { align-items: stretch; flex-direction: column; } .evidence-upload-button { min-height: 38px; } }
+
+/* Case selector layout refinement */
+.sidebar-case-badge {
+  display: block;
+  padding: 14px 14px 16px;
+}
+
+.sidebar-case-label {
+  display: block;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.sidebar-case-badge select.sidebar-case-select {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 0;
+}
+
+.case-sidebar-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.case-sidebar-button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 1px solid #34435c;
+  border-radius: 8px;
+  background: #172338;
+  color: #dce8f8;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.case-sidebar-button:hover:not(:disabled) {
+  background: #20314a;
+  border-color: #4a6a91;
+}
+
+.case-sidebar-button-danger {
+  padding-inline: 10px;
+  background: #241a20;
+  border-color: #4b303b;
+  color: #e8a6b0;
+}
+
+.case-sidebar-button-danger:hover:not(:disabled) {
+  background: #35212a;
+  border-color: #75404d;
+}
+
+.case-sidebar-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.case-sidebar-error {
+  margin: 9px 0 0;
+  color: #ffb4b4;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+}

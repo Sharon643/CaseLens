@@ -455,4 +455,52 @@ export async function getCaseAnomalies(
 
   return response.data;
 }
+// =========================================================
+// CASE MANAGEMENT
+// =========================================================
 
+export interface CreateCasePayload {
+  case_number: string;
+  title: string;
+  description?: string;
+}
+
+export async function createCase(
+  payload: CreateCasePayload
+): Promise<CaseRecord> {
+  const response = await api.post<CaseRecord>("/cases", payload);
+  return response.data;
+}
+
+export async function deleteCase(caseId: number): Promise<void> {
+  await api.delete(`/cases/${caseId}`);
+}
+
+// =========================================================
+// EVIDENCE UPLOAD
+// =========================================================
+
+export interface EvidenceUploadResponse {
+  id: number;
+  case_id: number;
+  filename: string;
+  file_type: string;
+  file_size: number;
+  sha256_hash: string;
+  uploaded_at: string;
+}
+
+export async function uploadEvidence(
+  caseId: number,
+  file: File
+): Promise<EvidenceUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post<EvidenceUploadResponse>(
+    `/cases/${caseId}/evidence`,
+    formData
+  );
+
+  return response.data;
+}
