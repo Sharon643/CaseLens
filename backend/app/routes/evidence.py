@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.case import Case
 from app.models.evidence import Evidence
+from app.models.event import Event
+from app.models.relationship import Relationship
+from app.models.custody_record import CustodyRecord
 from app.services.evidence_integrity import EvidenceIntegrityService
+from app.services.extraction_service import ExtractionService
+from app.services.event_extraction import EventExtractionService
 
 
 router = APIRouter(
@@ -65,6 +70,84 @@ def list_case_evidence(
         ],
     }
 
+@router.delete("/{evidence_id}")
+def delete_evidence(
+    case_id: int,
+    evidence_id: int,
+    db: Session = Depends(get_db),
+):
+    case = db.get(Case, case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    evidence = (
+        db.query(Evidence)
+        .filter(
+            Evidence.id == evidence_id,
+            Evidence.case_id == case_id,
+        )
+        .first()
+    )
+
+    if evidence is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Evidence not found in this case",
+        )
+
+    file_path = Path(evidence.file_path).resolve()
+    storage_root = (STORAGE_ROOT / str(case_id)).resolve()
+
+    # Prevent deletion of files outside this case's storage directory.
+    if not file_path.is_relative_to(storage_root):
+        raise HTTPException(
+            status_code=400,
+            detail="Evidence path is outside the case storage directory",
+        )
+
+    try:
+        # Remove dependent database records explicitly.
+        db.query(Relationship).filter(
+            Relationship.evidence_id == evidence_id
+        ).delete(synchronize_session=False)
+
+        db.query(Event).filter(
+            Event.evidence_id == evidence_id
+        ).delete(synchronize_session=False)
+
+        db.query(CustodyRecord).filter(
+            CustodyRecord.evidence_id == evidence_id
+        ).delete(synchronize_session=False)
+
+        db.delete(evidence)
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete evidence records",
+        )
+
+    # Remove the physical file after the database transaction succeeds.
+    try:
+        if file_path.is_file():
+            file_path.unlink()
+    except OSError:
+        # The database record is gone, but the physical file may remain.
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Evidence records were deleted, but the physical file "
+                "could not be removed. Manual cleanup is required."
+            ),
+        )
+
+    return {
+        "message": "Evidence deleted successfully",
+        "case_id": case_id,
+        "evidence_id": evidence_id,
+    }
 
 @router.post(
     "",
@@ -127,6 +210,45 @@ def upload_evidence(
     db.commit()
     db.refresh(evidence)
 
+    #  Extract text from the uploaded evidence.
+    extraction_result = None
+    extraction_error = None
+    events_result = {"events_found": 0}
+    event_extraction_error = None
+
+    extraction_service = ExtractionService(db)
+
+    try:
+        extraction_result = extraction_service.extract(evidence.id)
+
+    except Exception as exc:
+        # Keep the uploaded evidence record even if extraction fails.
+        # ExtractionService records the failure status and error.
+        extraction_error = str(exc)
+
+    # Extract timestamped events only when text extraction
+    # succeeded and produced readable text.
+    db.refresh(evidence)
+
+    if (
+        evidence.extraction_status == "completed"
+        and evidence.extracted_text
+        and evidence.extracted_text.strip()
+    ):
+        try:
+            event_service = EventExtractionService(db)
+
+            events_result = event_service.extract_from_evidence(
+                evidence.id
+            )
+
+        except Exception as exc:
+            db.rollback()
+            event_extraction_error = str(exc)
+
+    # Refresh so the response contains the latest persisted status.
+    db.refresh(evidence)
+
     return {
         "id": evidence.id,
         "case_id": evidence.case_id,
@@ -135,8 +257,16 @@ def upload_evidence(
         "file_size": evidence.file_size,
         "sha256_hash": evidence.sha256_hash,
         "uploaded_at": evidence.uploaded_at,
+        "extraction_status": evidence.extraction_status,
+        "extraction_error": evidence.extraction_error,
+        "extracted_characters": (
+            len(evidence.extracted_text)
+            if evidence.extracted_text
+            else 0
+        ),
+        "events_found": events_result.get("events_found", 0),
+        "event_extraction_error": event_extraction_error,
     }
-
 @router.get("/{evidence_id}")
 def get_evidence(
     case_id: int,

@@ -488,6 +488,15 @@ export interface EvidenceUploadResponse {
   file_size: number;
   sha256_hash: string;
   uploaded_at: string;
+
+  // Text extraction results
+  extraction_status: string;
+  extraction_error: string | null;
+  extracted_characters: number;
+
+  // Event extraction results
+  events_found: number;
+  event_extraction_error: string | null;
 }
 
 export async function uploadEvidence(
@@ -503,4 +512,14 @@ export async function uploadEvidence(
   );
 
   return response.data;
+}
+// =========================================================
+// EVIDENCE MANAGEMENT
+// =========================================================
+
+export async function deleteEvidence(
+  caseId: number,
+  evidenceId: number
+): Promise<void> {
+  await api.delete(`/cases/${caseId}/evidence/${evidenceId}`);
 }

@@ -9,6 +9,7 @@ import {
   getOriginalEvidenceImageUrl,
   api,
   getCaseEvidenceFiles,
+  uploadEvidence,
 } from "./api/caseApi";
 
 import type {
@@ -152,6 +153,10 @@ function App() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadResults, setUploadResults] = useState<
+    { filename: string; status: "success" | "error"; message: string }[]
+  >([]);
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<number | null>(null);
   const [summary, setSummary] = useState<CaseSummary | null>(null);
   const [graph, setGraph] = useState<CaseGraph | null>(null);
   const [loading, setLoading] = useState(true);
@@ -619,26 +624,133 @@ function App() {
     }
   };
 
-  const handleUploadEvidence = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || selectedCaseId === null) return;
+  const refreshCaseAfterEvidenceChange = async (caseId: number) => {
+    const [filesResponse, summaryData, graphData, timelineResponse, analysisResponse] =
+      await Promise.all([
+        getCaseEvidenceFiles(caseId),
+        getCaseSummary(caseId),
+        getCaseGraph(caseId),
+        api.get<CaseTimelineResponse>(`/evidence/cases/${caseId}/events`),
+        api.get<CaseAnalysisResponse>(`/evidence/cases/${caseId}/analysis`),
+      ]);
 
+    if (selectedCaseId !== caseId) return;
+
+    setCaseFiles(filesResponse.files);
+    setSummary(summaryData);
+    setGraph(graphData);
+
+    const events = Array.isArray(timelineResponse.data.events)
+      ? timelineResponse.data.events
+      : [];
+    setTimelineEvents(
+      [...events].sort((a, b) => {
+        if (!a.timestamp) return 1;
+        if (!b.timestamp) return -1;
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      })
+    );
+    setAnalysis(analysisResponse.data);
+  };
+
+  const handleUploadEvidence = async (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (files.length === 0 || selectedCaseId === null) return;
+
+    const caseId = selectedCaseId;
     setUploadLoading(true);
     setUploadMessage(null);
     setUploadError(null);
-    const formData = new FormData();
-    formData.append("file", file);
+    setUploadResults([]);
+
+    const results: {
+      filename: string;
+      status: "success" | "error";
+      message: string;
+    }[] = [];
+
+    // Upload sequentially so each file has an independent result and errors
+    // from one file do not prevent the remaining files from being attempted.
+    for (const file of files) {
+      try {
+        const result = await uploadEvidence(caseId, file);
+        results.push({
+          filename: file.name,
+          status: "success",
+          message: `Uploaded. Extraction: ${result.extraction_status ?? "unknown"}; ${result.events_found ?? 0} events found.`,
+        });
+      } catch (err: any) {
+        const detail = err?.response?.data?.detail;
+        results.push({
+          filename: file.name,
+          status: "error",
+          message:
+            typeof detail === "string"
+              ? detail
+              : "Upload failed. Check the file and try again.",
+        });
+      }
+      setUploadResults([...results]);
+    }
+
+    const succeeded = results.filter((item) => item.status === "success").length;
+    const failed = results.length - succeeded;
+
+    if (selectedCaseId === caseId) {
+      setUploadMessage(
+        `${succeeded} of ${files.length} file(s) uploaded successfully.` +
+          (failed ? ` ${failed} failed; see individual results below.` : "")
+      );
+      try {
+        await refreshCaseAfterEvidenceChange(caseId);
+      } catch (err) {
+        console.error("Evidence uploaded, but refreshing case data failed:", err);
+        setUploadError(
+          "Upload finished, but some case views could not refresh. Try switching cases or reloading."
+        );
+      }
+    }
+
+    setUploadLoading(false);
+  };
+
+  const handleDeleteEvidence = async (evidenceId: number, filename: string) => {
+    if (selectedCaseId === null) return;
+
+    const caseId = selectedCaseId;
+    const confirmed = window.confirm(
+      `Permanently delete "${filename}" from this case?\n\n` +
+        "The current backend also deletes its extracted events, relationships, and custody-history records. " +
+        "This cannot be undone. Continue only if this is intentional."
+    );
+    if (!confirmed) return;
+
+    setDeletingEvidenceId(evidenceId);
+    setUploadError(null);
+    setUploadMessage(null);
+
     try {
-      await api.post(`/cases/${selectedCaseId}/evidence`, formData);
-      const refreshedFiles = await getCaseEvidenceFiles(selectedCaseId);
-      setCaseFiles(refreshedFiles.files);
-      setUploadMessage(`Uploaded ${file.name}. The evidence file is now listed in this case.`);
+      await api.delete(`/cases/${caseId}/evidence/${evidenceId}`);
+
+      if (selectedEvidenceId === evidenceId) {
+        closeEvidenceViewer();
+      }
+
+      await refreshCaseAfterEvidenceChange(caseId);
+      setUploadMessage(`Deleted ${filename}.`);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      setUploadError(typeof detail === "string" ? detail : "Upload failed. Check the file and try again.");
+      setUploadError(
+        typeof detail === "string"
+          ? detail
+          : "Could not delete the evidence file. Check the backend logs and try again."
+      );
     } finally {
-      setUploadLoading(false);
+      setDeletingEvidenceId(null);
     }
   };
 
@@ -1056,15 +1168,36 @@ function App() {
             <section className="evidence-upload-card">
               <div>
                 <h2>Add evidence</h2>
-                <p>Select a file to preserve it in the active case and calculate its hash.</p>
+                <p>Select one or more files to preserve them in the active case and calculate their hashes.</p>
               </div>
               <label className="evidence-upload-button">
-                {uploadLoading ? "Uploading…" : "Choose file"}
-                <input type="file" onChange={handleUploadEvidence} disabled={uploadLoading} />
+                {uploadLoading ? "Uploading files…" : "Choose files"}
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleUploadEvidence}
+                  disabled={uploadLoading || selectedCaseId === null}
+                />
               </label>
               {uploadMessage && <p className="evidence-upload-success" role="status">{uploadMessage}</p>}
               {uploadError && <p className="case-form-error" role="alert">{uploadError}</p>}
-              <p className="evidence-upload-note">Uploading stores the original file and its hash. Extraction and analysis may require a separate processing step.</p>
+              {uploadResults.length > 0 && (
+                <div className="evidence-upload-results" aria-label="Upload results">
+                  {uploadResults.map((result, index) => (
+                    <div
+                      className={`evidence-upload-result ${result.status === "success" ? "is-success" : "is-error"}`}
+                      key={`${result.filename}-${index}`}
+                    >
+                      <strong>{result.filename}</strong>
+                      <span>{result.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="evidence-upload-note">
+                Files are uploaded individually. Duplicate filenames are rejected rather than overwritten.
+                A failed file does not prevent the remaining selected files from being attempted.
+              </p>
             </section>
 
             {/* Inline file list preview */}
@@ -1091,14 +1224,24 @@ function App() {
                         <span>{(file.file_size / 1024).toFixed(1)} KB</span>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className="finding-timeline-button"
-                      disabled={!file.available_on_disk}
-                      onClick={() => setSelectedEvidenceId(file.id)}
-                    >
-                      Open evidence →
-                    </button>
+                    <div className="evidence-file-actions">
+                      <button
+                        type="button"
+                        className="finding-timeline-button"
+                        disabled={!file.available_on_disk}
+                        onClick={() => setSelectedEvidenceId(file.id)}
+                      >
+                        Open evidence →
+                      </button>
+                      <button
+                        type="button"
+                        className="case-sidebar-button case-sidebar-button-danger"
+                        disabled={deletingEvidenceId !== null || uploadLoading}
+                        onClick={() => void handleDeleteEvidence(file.id, file.original_filename)}
+                      >
+                        {deletingEvidenceId === file.id ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
                   </article>
                 ))}
             </div>
