@@ -16,6 +16,7 @@ from app.models.custody_record import CustodyRecord
 from app.services.evidence_integrity import EvidenceIntegrityService
 from app.services.extraction_service import ExtractionService
 from app.services.event_extraction import EventExtractionService
+from app.services.relationship_extraction import RelationshipExtractionService
 
 
 router = APIRouter(
@@ -246,6 +247,45 @@ def upload_evidence(
             db.rollback()
             event_extraction_error = str(exc)
 
+    # Automatically extract relationships from newly created events.
+    relationships_result = {"relationships_created": 0}
+    relationship_extraction_error = None
+
+    if (
+        evidence.extraction_status == "completed"
+        and evidence.extracted_text
+        and evidence.extracted_text.strip()
+        and event_extraction_error is None
+    ):
+        try:
+            relationship_service = RelationshipExtractionService(db)
+
+            # Only process events belonging to this uploaded evidence.
+            extracted_events = (
+                db.query(Event)
+                .filter(Event.evidence_id == evidence.id)
+                .all()
+            )
+
+            total_relationships = 0
+
+            for extracted_event in extracted_events:
+                result = relationship_service.extract_from_event(
+                    extracted_event.id
+                )
+
+                total_relationships += result.get(
+                    "relationships_created", 0
+                )
+
+            relationships_result = {
+                "relationships_created": total_relationships
+            }
+
+        except Exception as exc:
+            db.rollback()
+            relationship_extraction_error = str(exc)
+
     # Refresh so the response contains the latest persisted status.
     db.refresh(evidence)
 
@@ -266,6 +306,10 @@ def upload_evidence(
         ),
         "events_found": events_result.get("events_found", 0),
         "event_extraction_error": event_extraction_error,
+        "relationships_created": relationships_result[
+            "relationships_created"
+        ],
+        "relationship_extraction_error": relationship_extraction_error,
     }
 @router.get("/{evidence_id}")
 def get_evidence(

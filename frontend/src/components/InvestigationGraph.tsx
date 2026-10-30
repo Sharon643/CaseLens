@@ -160,7 +160,7 @@ function InvestigationGraph({
       setLayouting(true);
 
       try {
-        const elkNodes = nodes.map((node) => ({
+        const elkNodes = initialNodes.map((node) => ({
           id: node.id,
           width: 140,
           height: 50,
@@ -204,7 +204,7 @@ function InvestigationGraph({
         }
 
         const positionedNodes =
-          nodes.map((node) => {
+          initialNodes.map((node) => {
             const layoutNode =
               layout.children?.find(
                 (item) =>
@@ -246,7 +246,7 @@ function InvestigationGraph({
       cancelled = true;
     };
 
-  }, [graph, setNodes]);
+  }, [graph, initialNodes, setNodes]);
 
   const handleNodeClick: NodeMouseHandler = (
     _event,
